@@ -3,10 +3,10 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"log"
 	"net/http"
-	"os"
 
 	"clawclient/app"
 	"clawclient/templates"
@@ -14,40 +14,29 @@ import (
 )
 
 func main() {
-	// Check if running as desktop dev server
-	if len(os.Args) > 1 && os.Args[1] == "serve" {
-		runDevServer()
-		return
+	addr := flag.String("addr", "0.0.0.0:3000", "Listen address (host:port)")
+	dev := flag.Bool("dev", false, "Enable dev mode with live reload")
+	flag.Parse()
+
+	if *dev {
+		templates.DevMode = true
 	}
 
-	// Default: show usage
-	fmt.Println("clawclient - built with irgo")
-	fmt.Println()
-	fmt.Println("Usage:")
-	fmt.Println("  go run . serve       Start development server")
-	fmt.Println("  irgo dev             Start dev server with hot reload")
-	fmt.Println("  irgo run desktop     Run as desktop app")
-	fmt.Println("  irgo run ios         Build and run on iOS Simulator")
-	fmt.Println("  irgo run android     Build and run on Android Emulator")
-}
-
-// runDevServer starts an HTTP server for development with live reload
-func runDevServer() {
-	// Enable dev mode for templates (enables live reload script)
-	templates.DevMode = true
-
 	r := app.NewRouter()
-	lr := livereload.New()
 
-	// Set up mux with live reload endpoint
-	handler := r.Handler()
+	// Build the HTTP mux
 	mux := http.NewServeMux()
-	mux.HandleFunc("/dev/livereload", lr.Handler())
-	mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
-	mux.Handle("/", handler)
 
-	port := ":8080"
-	fmt.Printf("Starting dev server at http://localhost%s\n", port)
-	fmt.Printf("Live reload enabled (build time: %d)\n", lr.BuildTime())
-	log.Fatal(http.ListenAndServe(port, mux))
+	if *dev {
+		lr := livereload.New()
+		mux.HandleFunc("/dev/livereload", lr.Handler())
+		// Serve static files from disk in dev mode (not embedded)
+		mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
+		fmt.Printf("Live reload enabled (build time: %d)\n", lr.BuildTime())
+	}
+
+	mux.Handle("/", r.Handler())
+
+	fmt.Printf("🦞 ClawClient starting on http://%s\n", *addr)
+	log.Fatal(http.ListenAndServe(*addr, mux))
 }

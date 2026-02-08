@@ -12,11 +12,27 @@ import (
 const configDir = ".clawclient"
 const configFile = "config.json"
 
+// Defaults for the local Pi deployment.
+const (
+	DefaultGatewayURL   = "ws://localhost:18789"
+	DefaultWorkspacePath = "/home/stu/clawd"
+)
+
 // Config holds all persistent configuration.
 type Config struct {
-	GatewayURL string `json:"gatewayUrl"`
-	AuthToken  string `json:"authToken"`
-	DeviceID   string `json:"deviceId"`
+	GatewayURL    string `json:"gatewayUrl"`
+	AuthToken     string `json:"authToken"`
+	DeviceID      string `json:"deviceId"`
+	WorkspacePath string `json:"workspacePath"`
+}
+
+// ConversationMapPath returns the path to conversation-map.json.
+func (c Config) ConversationMapPath() string {
+	ws := c.WorkspacePath
+	if ws == "" {
+		ws = DefaultWorkspacePath
+	}
+	return filepath.Join(ws, "memory", "conversation-map.json")
 }
 
 // Store manages persistent configuration.
@@ -42,7 +58,7 @@ func New() (*Store, error) {
 		filePath: filepath.Join(dir, configFile),
 	}
 
-	// Load existing config
+	// Load existing config (or set defaults)
 	s.load()
 	return s, nil
 }
@@ -71,6 +87,14 @@ func (s *Store) SetDeviceID(id string) error {
 	return s.save()
 }
 
+// SetWorkspacePath updates the workspace path.
+func (s *Store) SetWorkspacePath(path string) error {
+	s.mu.Lock()
+	s.config.WorkspacePath = path
+	s.mu.Unlock()
+	return s.save()
+}
+
 // IsConfigured returns true if gateway URL and token are set.
 func (s *Store) IsConfigured() bool {
 	cfg := s.Get()
@@ -80,12 +104,25 @@ func (s *Store) IsConfigured() bool {
 func (s *Store) load() {
 	data, err := os.ReadFile(s.filePath)
 	if err != nil {
-		return // File doesn't exist yet, that's fine
+		// File doesn't exist — apply defaults
+		s.mu.Lock()
+		s.config.GatewayURL = DefaultGatewayURL
+		s.config.WorkspacePath = DefaultWorkspacePath
+		s.mu.Unlock()
+		return
 	}
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	json.Unmarshal(data, &s.config)
+
+	// Back-fill defaults for fields missing from older configs
+	if s.config.GatewayURL == "" {
+		s.config.GatewayURL = DefaultGatewayURL
+	}
+	if s.config.WorkspacePath == "" {
+		s.config.WorkspacePath = DefaultWorkspacePath
+	}
 }
 
 func (s *Store) save() error {

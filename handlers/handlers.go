@@ -29,11 +29,40 @@ func NewApp() *App {
 		log.Printf("[app] Warning: could not init store: %v", err)
 	}
 
-	return &App{
+	a := &App{
 		Store:   s,
 		Gateway: gateway.NewClient(),
 		Engine:  ctxengine.NewEngine(),
 	}
+
+	// Point the context engine at the workspace conversation map
+	if s != nil {
+		cfg := s.Get()
+		a.Engine.SetMapPath(cfg.ConversationMapPath())
+		log.Printf("[app] Workspace path: %s", cfg.WorkspacePath)
+		log.Printf("[app] Conversation map: %s", cfg.ConversationMapPath())
+	}
+
+	// Auto-connect to gateway in the background if already configured
+	if s != nil && s.IsConfigured() {
+		go a.autoConnect()
+	}
+
+	return a
+}
+
+// autoConnect tries to connect to the gateway using saved config.
+func (a *App) autoConnect() {
+	cfg := a.Store.Get()
+	log.Printf("[app] Auto-connecting to gateway at %s", cfg.GatewayURL)
+
+	if err := a.Gateway.Connect(cfg.GatewayURL, cfg.AuthToken); err != nil {
+		log.Printf("[app] Auto-connect failed: %v (will retry on manual connect)", err)
+		return
+	}
+
+	a.setupGatewayHandlers()
+	log.Printf("[app] Auto-connected to gateway successfully")
 }
 
 // Mount registers all handlers on the router.
@@ -61,7 +90,15 @@ func (a *App) handleHome(ctx *router.Context) (string, error) {
 
 // handleOnboard renders the setup page.
 func (a *App) handleOnboard(ctx *router.Context) (string, error) {
-	return renderer.Render(templates.OnboardPage())
+	// Pre-fill with defaults/saved values
+	gatewayURL := store.DefaultGatewayURL
+	if a.Store != nil {
+		cfg := a.Store.Get()
+		if cfg.GatewayURL != "" {
+			gatewayURL = cfg.GatewayURL
+		}
+	}
+	return renderer.Render(templates.OnboardPage(gatewayURL))
 }
 
 // handleConnect processes gateway connection from onboarding.
@@ -90,6 +127,11 @@ func (a *App) handleConnect(ctx *router.Context) error {
 		}
 	}
 
+	// Disconnect any existing connection first
+	if a.Gateway.IsConnected() {
+		a.Gateway.Close()
+	}
+
 	// Attempt connection
 	if err := a.Gateway.Connect(signals.GatewayURL, signals.AuthToken); err != nil {
 		log.Printf("[handler] Connection failed: %v", err)
@@ -99,7 +141,7 @@ func (a *App) handleConnect(ctx *router.Context) error {
 	// Setup event handlers
 	a.setupGatewayHandlers()
 
-	// Success - redirect to timeline
+	// Success — redirect to timeline
 	sse.PatchTempl(templates.ConnectSuccess())
 	return sse.Redirect("/")
 }
@@ -108,7 +150,7 @@ func (a *App) handleConnect(ctx *router.Context) error {
 func (a *App) handleTimeline(ctx *router.Context) error {
 	sse := ctx.SSE()
 
-	// If connected, try to fetch history
+	// If connected, try to fetch history from gateway
 	if a.Gateway.IsConnected() {
 		res, err := a.Gateway.GetHistory("", 50)
 		if err != nil {
@@ -132,6 +174,7 @@ func (a *App) handleTimeline(ctx *router.Context) error {
 		}
 	}
 
+	// GetTimeline also refreshes from conversation-map.json on disk
 	blocks := a.Engine.GetTimeline()
 	return sse.PatchTempl(templates.TimelineView(blocks))
 }

@@ -209,11 +209,11 @@ templ CompactionDivider() {
 }
 
 // OnboardPage renders the setup screen.
-templ OnboardPage() {
+templ OnboardPage(defaultGatewayURL string) {
 	@Layout("ClawClient - Setup") {
 		<div class="min-h-screen flex items-center justify-center p-4">
 			<div class="w-full max-w-md"
-				data-signals="{gatewayUrl: '', authToken: '', connectStatus: '', connectError: ''}">
+				data-signals={ fmt.Sprintf("{gatewayUrl: '%s', authToken: '', connectStatus: '', connectError: ''}", defaultGatewayURL) }>
 				<div class="text-center mb-8">
 					<span class="text-5xl block mb-4">🦞</span>
 					<h1 class="text-2xl font-bold text-zinc-100 mb-2">ClawClient</h1>
@@ -225,7 +225,7 @@ templ OnboardPage() {
 						<input
 							type="text"
 							data-bind="gatewayUrl"
-							placeholder="ws://localhost:3200"
+							placeholder="ws://localhost:18789"
 							class="w-full bg-zinc-700 text-zinc-100 rounded-lg px-4 py-2.5 placeholder-zinc-500 border border-zinc-600 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-colors"
 						/>
 					</div>

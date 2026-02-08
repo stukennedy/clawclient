@@ -4,6 +4,8 @@ import (
 	"crypto/md5"
 	"encoding/json"
 	"fmt"
+	"log"
+	"os"
 	"sort"
 	"sync"
 	"time"
@@ -13,6 +15,10 @@ import (
 type Engine struct {
 	mu       sync.RWMutex
 	contexts map[string]*Context
+
+	// Path to conversation-map.json on disk (optional).
+	mapPath     string
+	mapLastMod  time.Time
 }
 
 // NewEngine creates a new context engine.
@@ -20,6 +26,14 @@ func NewEngine() *Engine {
 	return &Engine{
 		contexts: make(map[string]*Context),
 	}
+}
+
+// SetMapPath sets the filesystem path for conversation-map.json.
+// The engine will read from this file when refreshing the timeline.
+func (e *Engine) SetMapPath(path string) {
+	e.mu.Lock()
+	e.mapPath = path
+	e.mu.Unlock()
 }
 
 // GetContext returns a context by name, creating it if it doesn't exist.
@@ -86,8 +100,53 @@ func (e *Engine) AddAgent(contextName string, agent AgentSpawn) {
 	ctx.Agents = append(ctx.Agents, agent)
 }
 
+// RefreshFromDisk re-reads conversation-map.json if it has been modified.
+// Returns true if data was reloaded.
+func (e *Engine) RefreshFromDisk() bool {
+	e.mu.RLock()
+	path := e.mapPath
+	lastMod := e.mapLastMod
+	e.mu.RUnlock()
+
+	if path == "" {
+		return false
+	}
+
+	info, err := os.Stat(path)
+	if err != nil {
+		// File doesn't exist (yet) — that's normal
+		return false
+	}
+
+	if !info.ModTime().After(lastMod) {
+		return false // unchanged
+	}
+
+	data, err := os.ReadFile(path)
+	if err != nil {
+		log.Printf("[ctxengine] Error reading %s: %v", path, err)
+		return false
+	}
+
+	if err := e.LoadFromJSON(data); err != nil {
+		log.Printf("[ctxengine] Error parsing %s: %v", path, err)
+		return false
+	}
+
+	e.mu.Lock()
+	e.mapLastMod = info.ModTime()
+	e.mu.Unlock()
+
+	log.Printf("[ctxengine] Reloaded conversation map from %s (%d bytes)", path, len(data))
+	return true
+}
+
 // GetTimeline returns timeline blocks sorted reverse chronologically.
+// It automatically refreshes from disk first if a map path is set.
 func (e *Engine) GetTimeline() []TimelineBlock {
+	// Try to refresh from disk before building the timeline
+	e.RefreshFromDisk()
+
 	e.mu.RLock()
 	defer e.mu.RUnlock()
 
