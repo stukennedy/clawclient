@@ -51,8 +51,9 @@ type Client struct {
 	reqCounter atomic.Int64
 
 	// Event handlers
-	onEvent    func(Event)
-	onAgent    func(AgentEvent)
+	onEvent       func(Event)
+	onAgent       func(AgentEvent)
+	onChat        func(ChatEvent)
 	onStateChange func(ConnectionState)
 
 	// Pending request callbacks
@@ -102,6 +103,13 @@ func (c *Client) OnEvent(fn func(Event)) {
 func (c *Client) OnAgent(fn func(AgentEvent)) {
 	c.mu.Lock()
 	c.onAgent = fn
+	c.mu.Unlock()
+}
+
+// OnChat sets the handler for chat broadcast events (delta, final, error).
+func (c *Client) OnChat(fn func(ChatEvent)) {
+	c.mu.Lock()
+	c.onChat = fn
 	c.mu.Unlock()
 }
 
@@ -430,14 +438,32 @@ func (c *Client) handleMessage(msg *Message) {
 		}
 		c.pendingMu.Unlock()
 
-		// Handle agent events specially
-		if msg.EventName() == "agent" {
+		eventName := msg.EventName()
+
+		// Handle chat broadcast events (delta/final/error from agent runs)
+		if eventName == "chat" {
+			c.mu.RLock()
+			cb := c.onChat
+			c.mu.RUnlock()
+			if cb != nil {
+				var evt ChatEvent
+				if data, err := json.Marshal(msg.EventData()); err == nil {
+					json.Unmarshal(data, &evt)
+				}
+				log.Printf("[gateway] chat event: state=%s runId=%s", evt.State, evt.RunID)
+				cb(evt)
+			}
+			return
+		}
+
+		// Handle agent lifecycle/streaming events
+		if eventName == "agent" {
 			c.mu.RLock()
 			cb := c.onAgent
 			c.mu.RUnlock()
 			if cb != nil {
 				var evt AgentEvent
-				if data, err := json.Marshal(msg.Params); err == nil {
+				if data, err := json.Marshal(msg.EventData()); err == nil {
 					json.Unmarshal(data, &evt)
 				}
 				evt.Raw = msg
@@ -452,8 +478,8 @@ func (c *Client) handleMessage(msg *Message) {
 		c.mu.RUnlock()
 		if cb != nil {
 			cb(Event{
-				Type: msg.EventName(),
-				Data: msg.Params,
+				Type: eventName,
+				Data: msg.EventData(),
 				Raw:  msg,
 			})
 		}

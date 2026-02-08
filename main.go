@@ -14,7 +14,7 @@ import (
 )
 
 func main() {
-	addr := flag.String("addr", "0.0.0.0:3000", "Listen address (host:port)")
+	addr := flag.String("addr", "0.0.0.0:3001", "Listen address (host:port)")
 	dev := flag.Bool("dev", false, "Enable dev mode with live reload")
 	flag.Parse()
 
