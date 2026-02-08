@@ -107,13 +107,13 @@ templ FeedBubble(msg ctxengine.FeedMessage) {
 		</div>
 	} else {
 		<div id={ "msg-" + msg.Event.ID } class="flex justify-start">
-			<div class="max-w-[80%]">
+			<div class="max-w-[85%]">
 				<div class="bg-zinc-800 border border-zinc-700 text-zinc-200 rounded-2xl rounded-bl-md px-4 py-2.5"
 					style={ fmt.Sprintf("border-left: 3px solid %s", msg.ContextColor) }>
 					if msg.Event.Model != "" {
 						<span class="text-[10px] text-zinc-500 block mb-1">{ msg.Event.Model }</span>
 					}
-					<p class="text-sm leading-relaxed whitespace-pre-wrap">{ msg.Event.Content }</p>
+					<div class="msg-markdown text-sm leading-relaxed prose prose-invert prose-sm max-w-none prose-p:my-1 prose-pre:my-2 prose-ul:my-1 prose-ol:my-1 prose-li:my-0.5 prose-headings:my-2 prose-code:text-emerald-400 prose-code:bg-zinc-700/50 prose-code:px-1 prose-code:rounded prose-pre:bg-zinc-900 prose-pre:border prose-pre:border-zinc-700 prose-a:text-blue-400">{ msg.Event.Content }</div>
 					<div class="flex items-center gap-2 mt-1">
 						<button
 							data-on:click={ fmt.Sprintf("@get('/api/thread/%s')", msg.ContextKey) }
@@ -292,7 +292,7 @@ templ StatusCard(content string) {
 templ MessageBubble(event ctxengine.Event) {
 	if event.Role == "user" {
 		<div class="flex justify-end">
-			<div class="max-w-[80%] bg-blue-600 text-white rounded-2xl rounded-br-md px-4 py-2.5">
+			<div class="max-w-[85%] bg-blue-600 text-white rounded-2xl rounded-br-md px-4 py-2.5">
 				<p class="text-sm leading-relaxed whitespace-pre-wrap">{ event.Content }</p>
 				<span class="text-[10px] text-blue-200 mt-1 block text-right">
 					if !event.Timestamp.IsZero() {
@@ -303,11 +303,11 @@ templ MessageBubble(event ctxengine.Event) {
 		</div>
 	} else {
 		<div class="flex justify-start">
-			<div class="max-w-[80%] bg-zinc-800 border border-zinc-700 text-zinc-200 rounded-2xl rounded-bl-md px-4 py-2.5">
+			<div class="max-w-[85%] bg-zinc-800 border border-zinc-700 text-zinc-200 rounded-2xl rounded-bl-md px-4 py-2.5">
 				if event.Model != "" {
 					<span class="text-[10px] text-zinc-500 block mb-1">{ event.Model }</span>
 				}
-				<p class="text-sm leading-relaxed whitespace-pre-wrap">{ event.Content }</p>
+				<div class="msg-markdown text-sm leading-relaxed prose prose-invert prose-sm max-w-none prose-p:my-1 prose-pre:my-2 prose-ul:my-1 prose-ol:my-1 prose-li:my-0.5 prose-headings:my-2 prose-code:text-emerald-400 prose-code:bg-zinc-700/50 prose-code:px-1 prose-code:rounded prose-pre:bg-zinc-900 prose-pre:border prose-pre:border-zinc-700 prose-a:text-blue-400">{ event.Content }</div>
 				<span class="text-[10px] text-zinc-500 mt-1 block">
 					if !event.Timestamp.IsZero() {
 						{ event.Timestamp.Format("15:04") }

@@ -132,3 +132,110 @@ html, body {
   --tw-prose-links: #60a5fa;
   --tw-prose-code: #e4e4e7;
 }
+
+/* ============================================
+   Markdown Rendered Content
+   ============================================ */
+
+.msg-markdown h1, .msg-markdown h2, .msg-markdown h3 {
+  font-weight: 600;
+  color: #f4f4f5;
+  margin: 0.75em 0 0.25em;
+}
+.msg-markdown h1 { font-size: 1.1em; }
+.msg-markdown h2 { font-size: 1.05em; }
+.msg-markdown h3 { font-size: 1em; }
+
+.msg-markdown p {
+  margin: 0.4em 0;
+}
+
+.msg-markdown ul, .msg-markdown ol {
+  margin: 0.4em 0;
+  padding-left: 1.5em;
+}
+.msg-markdown ul { list-style: disc; }
+.msg-markdown ol { list-style: decimal; }
+.msg-markdown li { margin: 0.15em 0; }
+
+.msg-markdown code {
+  background: rgba(63, 63, 70, 0.5);
+  color: #6ee7b7;
+  padding: 0.15em 0.35em;
+  border-radius: 4px;
+  font-size: 0.9em;
+}
+
+.msg-markdown pre {
+  background: #09090b;
+  border: 1px solid #3f3f46;
+  border-radius: 8px;
+  padding: 0.75em 1em;
+  margin: 0.5em 0;
+  overflow-x: auto;
+  font-size: 0.85em;
+}
+.msg-markdown pre code {
+  background: none;
+  color: #d4d4d8;
+  padding: 0;
+  border-radius: 0;
+}
+
+.msg-markdown a {
+  color: #60a5fa;
+  text-decoration: underline;
+}
+
+.msg-markdown blockquote {
+  border-left: 3px solid #3f3f46;
+  padding-left: 0.75em;
+  margin: 0.5em 0;
+  color: #a1a1aa;
+}
+
+.msg-markdown strong { font-weight: 600; color: #f4f4f5; }
+.msg-markdown em { font-style: italic; }
+
+.msg-markdown hr {
+  border: none;
+  border-top: 1px solid #3f3f46;
+  margin: 0.75em 0;
+}
+
+.msg-markdown table {
+  border-collapse: collapse;
+  margin: 0.5em 0;
+  font-size: 0.85em;
+  width: 100%;
+  overflow-x: auto;
+  display: block;
+}
+.msg-markdown th, .msg-markdown td {
+  border: 1px solid #3f3f46;
+  padding: 0.35em 0.6em;
+  text-align: left;
+}
+.msg-markdown th {
+  background: rgba(63, 63, 70, 0.3);
+  font-weight: 600;
+}
+
+.msg-markdown img {
+  max-width: 100%;
+  border-radius: 8px;
+  margin: 0.5em 0;
+}
+
+/* Textarea input styling */
+.chat-input {
+  scrollbar-width: thin;
+  scrollbar-color: #3f3f46 transparent;
+}
+.chat-input::-webkit-scrollbar {
+  width: 4px;
+}
+.chat-input::-webkit-scrollbar-thumb {
+  background: #3f3f46;
+  border-radius: 2px;
+}

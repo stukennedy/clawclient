@@ -13,7 +13,9 @@ templ Layout(title string) {
 			<meta name="apple-mobile-web-app-capable" content="yes"/>
 			<title>{ title }</title>
 			<link rel="stylesheet" href="/static/css/output.css"/>
+			<script src="/static/js/marked.min.js"></script>
 			<script type="module" src="/static/js/datastar.js"></script>
+			<script defer src="/static/js/app.js"></script>
 		</head>
 		<body class="bg-zinc-900 text-zinc-100 flex flex-col" style="height: 100dvh; height: -webkit-fill-available; overflow: hidden;">
 			{ children... }
@@ -113,20 +115,23 @@ templ AppShell(title string, connected bool) {
 				{ children... }
 			</main>
 			<!-- Message Input Bar -->
-			<footer class="shrink-0 bg-zinc-800 border-t border-zinc-700 px-4 py-3">
-				<div class="flex items-center gap-2 max-w-4xl mx-auto">
-					<input
-						type="text"
+			<footer class="shrink-0 bg-zinc-800 border-t border-zinc-700 px-3 py-2">
+				<div class="flex items-end gap-2 max-w-4xl mx-auto">
+					<textarea
+						rows="1"
 						data-bind="messageInput"
-						data-on:keydown.enter="@post('/api/send')"
-						placeholder="Send a message..."
-						class="flex-1 bg-zinc-700 text-zinc-100 rounded-lg px-4 py-2.5 placeholder-zinc-400 border border-zinc-600 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-colors"
-					/>
+						data-on:keydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();@post('/api/send')}"
+						placeholder="Message..."
+						class="chat-input flex-1 bg-zinc-700 text-zinc-100 rounded-2xl px-4 py-2.5 placeholder-zinc-400 border border-zinc-600 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-colors resize-none leading-snug"
+						style="max-height: 150px; min-height: 40px;"
+					></textarea>
 					<button
 						data-on:click="@post('/api/send')"
-						class="bg-blue-600 hover:bg-blue-500 text-white rounded-lg px-4 py-2.5 font-medium transition-colors shrink-0"
+						class="bg-blue-600 hover:bg-blue-500 text-white rounded-full w-10 h-10 flex items-center justify-center transition-colors shrink-0 mb-0.5"
 					>
-						Send
+						<svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+							<path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+						</svg>
 					</button>
 				</div>
 			</footer>
