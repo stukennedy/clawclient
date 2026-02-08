@@ -2,259 +2,286 @@ package templates
 
 import (
 	"fmt"
-	"math"
+	"clawclient/internal/ctxengine"
 )
 
+// HomePage renders the main timeline view.
 templ HomePage() {
-	@FullscreenPage("Irgo + Datastar") {
-		<div
-			class="constellation-container"
-			data-signals="{mouseX: 0.5, mouseY: 0.5}"
-			data-init="@get('/api/init')"
-			data-on:mousemove__throttle.100ms="$mouseX = evt.clientX / window.innerWidth; $mouseY = evt.clientY / window.innerHeight; @get('/api/pulse')"
-			data-on:touchmove__throttle.100ms__prevent="$mouseX = evt.touches[0].clientX / window.innerWidth; $mouseY = evt.touches[0].clientY / window.innerHeight; @get('/api/pulse')"
-		>
-			<!-- Ambient background layers -->
-			<div class="bg-layer bg-gradient"></div>
-			<div class="bg-layer bg-noise"></div>
-			<div class="bg-layer bg-glow"></div>
+	@AppShell("ClawClient", false) {
+		<div id="timeline-container" class="max-w-4xl mx-auto p-4"
+			data-init="@get('/api/timeline')">
+			@TimelineLoading()
+		</div>
+	}
+}
 
-			<!-- Interactive SVG Canvas -->
-			<div class="interaction-zone">
-				<!-- Central Orb -->
-				<div id="orb-container" class="orb-wrapper">
-					@OrbSVG(0.5, 0.5, 0)
-				</div>
+// TimelineLoading shows a loading state.
+templ TimelineLoading() {
+	<div id="timeline-content" class="flex flex-col items-center justify-center py-20">
+		<div class="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+		<p class="text-zinc-400 text-sm">Loading timeline...</p>
+	</div>
+}
 
-				<!-- Floating Particles -->
-				<div id="particles" class="particles-container">
-					@ParticlesSVG(0.5, 0.5)
-				</div>
+// TimelineEmpty shows when there's no data.
+templ TimelineEmpty() {
+	<div id="timeline-content" class="flex flex-col items-center justify-center py-20">
+		<span class="text-4xl mb-4">🦞</span>
+		<h2 class="text-lg font-semibold text-zinc-300 mb-2">No conversations yet</h2>
+		<p class="text-zinc-500 text-sm">Send a message to get started</p>
+	</div>
+}
 
-				<!-- Connection Lines -->
-				<svg id="connections" class="connections-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
-					@ConnectionPaths(0.5, 0.5)
-				</svg>
+// TimelineView renders the full timeline.
+templ TimelineView(blocks []ctxengine.TimelineBlock) {
+	<div id="timeline-content" class="space-y-2">
+		if len(blocks) == 0 {
+			@TimelineEmpty()
+		}
+		for i, block := range blocks {
+			if i == 0 || blocks[i-1].Date != block.Date {
+				@DateHeader(block.Date)
+			}
+			@ContextBlock(block)
+		}
+	</div>
+}
+
+// DateHeader renders a date divider.
+templ DateHeader(date string) {
+	<div class="flex items-center gap-3 py-3">
+		<div class="h-px flex-1 bg-zinc-700"></div>
+		<span class="text-xs font-medium text-zinc-500 uppercase tracking-wider">{ date }</span>
+		<div class="h-px flex-1 bg-zinc-700"></div>
+	</div>
+}
+
+// ContextBlock renders a single context block on the timeline.
+templ ContextBlock(block ctxengine.TimelineBlock) {
+	<div
+		class="bg-zinc-800 rounded-lg border border-zinc-700 hover:border-zinc-600 transition-colors cursor-pointer overflow-hidden"
+		style={ fmt.Sprintf("border-left: 4px solid %s", block.Context.Color) }
+		data-on:click={ fmt.Sprintf("@get('/api/thread/%s')", block.Context.Name) }
+	>
+		<div class="px-4 py-3">
+			<div class="flex items-center justify-between mb-1">
+				<h3 class="font-medium text-zinc-200 text-sm">{ block.Context.Name }</h3>
+				<span class="text-xs text-zinc-500">
+					if !block.Context.LastEvent.IsZero() {
+						{ block.Context.LastEvent.Format("15:04") }
+					}
+				</span>
 			</div>
-
-			<!-- UI Overlay -->
-			<div class="ui-overlay">
-				<header class="hero-header">
-					<h1 class="title">
-						<span class="title-gradient">Irgo</span>
-						<span class="title-divider">×</span>
-						<span class="title-accent">Datastar</span>
-					</h1>
-					<p class="tagline">Server-driven hypermedia for Go</p>
-				</header>
-
-				<div class="stats-panel glass-panel">
-					<div class="stat">
-						<span class="stat-label">Connection</span>
-						<span id="connection-status" class="stat-value">
-							@ConnectionStatus(false)
-						</span>
-					</div>
-					<div class="stat">
-						<span class="stat-label">Pulses</span>
-						<span id="pulse-count" class="stat-value mono">0</span>
-					</div>
-					<div class="stat">
-						<span class="stat-label">Latency</span>
-						<span id="latency" class="stat-value mono">0ms</span>
-					</div>
+			if block.Preview != "" {
+				<p class="text-zinc-400 text-sm leading-relaxed line-clamp-2">{ block.Preview }</p>
+			}
+			if len(block.AgentBadges) > 0 {
+				<div class="flex flex-wrap gap-1.5 mt-2">
+					for _, agent := range block.AgentBadges {
+						@AgentBadge(agent)
+					}
 				</div>
-
-				<div class="info-panel glass-panel">
-					<p class="info-text">
-						<strong>Move your cursor</strong> to see server-driven reactivity.
-						Every visual change flows through Go handlers via SSE.
-					</p>
-					<div class="tech-badges">
-						<span class="badge">Go</span>
-						<span class="badge">SSE</span>
-						<span class="badge">Templ</span>
-						<span class="badge">Datastar</span>
-					</div>
+			}
+			if block.HasCompaction {
+				<div class="mt-2 flex items-center gap-1.5 text-xs text-zinc-500">
+					<span>📦</span>
+					<span>Compacted</span>
 				</div>
+			}
+			if block.IsCron {
+				<div class="mt-1 flex items-center gap-1.5 text-xs text-zinc-500">
+					<span>⏰</span>
+					<span>Scheduled</span>
+				</div>
+			}
+		</div>
+	</div>
+}
 
-				<nav class="action-buttons">
-					<a href="https://github.com/stukennedy/irgo" class="btn btn-primary" target="_blank">
-						<svg class="btn-icon" viewBox="0 0 24 24" fill="currentColor">
-							<path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
-						</svg>
-						View Source
-					</a>
-					<button class="btn btn-secondary" data-on:click="@get('/api/burst')">
-						<svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-							<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
-						</svg>
-						Trigger Burst
-					</button>
-				</nav>
+// AgentBadge renders a sub-agent badge.
+templ AgentBadge(agent ctxengine.AgentSpawn) {
+	<span class="inline-flex items-center gap-1 text-xs bg-zinc-700 text-zinc-300 rounded-full px-2.5 py-0.5">
+		<span>🤖</span>
+		if agent.Model != "" {
+			<span class="text-zinc-400">{ agent.Model }:</span>
+		}
+		<span>{ agent.Task }</span>
+		if agent.Status == "running" {
+			<span class="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span>
+		}
+	</span>
+}
+
+// ThreadView renders a full context thread.
+templ ThreadView(thread *ctxengine.Context) {
+	<div id="main-content" class="flex flex-col h-full">
+		<!-- Thread Header -->
+		<div class="flex items-center gap-3 px-4 py-3 bg-zinc-800 border-b border-zinc-700 shrink-0">
+			<button
+				data-on:click="@get('/api/timeline')"
+				class="text-zinc-400 hover:text-zinc-200 transition-colors"
+			>
+				<svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+					<path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
+				</svg>
+			</button>
+			<div class="w-3 h-3 rounded-full shrink-0" style={ fmt.Sprintf("background: %s", thread.Color) }></div>
+			<h2 class="font-semibold text-zinc-200">{ thread.Name }</h2>
+		</div>
+		<!-- Thread Content -->
+		<div class="flex-1 overflow-y-auto px-4 py-4 space-y-4">
+			if thread.StatusMD != "" {
+				@StatusCard(thread.StatusMD)
+			}
+			if thread.Agents != nil && len(thread.Agents) > 0 {
+				<div class="flex flex-wrap gap-1.5 mb-3">
+					for _, agent := range thread.Agents {
+						@AgentBadge(agent)
+					}
+				</div>
+			}
+			<div id="message-list" class="space-y-3">
+				for _, event := range thread.Events {
+					if event.Type == "message" || event.Content != "" {
+						@MessageBubble(event)
+					}
+					if event.Type == "compaction" {
+						@CompactionDivider()
+					}
+				}
+			</div>
+		</div>
+	</div>
+}
+
+// StatusCard renders STATUS.md content as a pinned card.
+templ StatusCard(content string) {
+	<div class="bg-zinc-800 border border-zinc-700 rounded-lg p-4 mb-4">
+		<div class="flex items-center gap-2 mb-2">
+			<span class="text-sm">📌</span>
+			<span class="text-xs font-medium text-zinc-400 uppercase tracking-wider">Status</span>
+		</div>
+		<div class="text-sm text-zinc-300 leading-relaxed prose prose-invert prose-sm max-w-none">
+			{ content }
+		</div>
+	</div>
+}
+
+// MessageBubble renders a single message.
+templ MessageBubble(event ctxengine.Event) {
+	if event.Role == "user" {
+		<div class="flex justify-end">
+			<div class="max-w-[80%] bg-blue-600 text-white rounded-2xl rounded-br-md px-4 py-2.5">
+				<p class="text-sm leading-relaxed whitespace-pre-wrap">{ event.Content }</p>
+				<span class="text-[10px] text-blue-200 mt-1 block text-right">
+					if !event.Timestamp.IsZero() {
+						{ event.Timestamp.Format("15:04") }
+					}
+				</span>
+			</div>
+		</div>
+	} else {
+		<div class="flex justify-start">
+			<div class="max-w-[80%] bg-zinc-800 border border-zinc-700 text-zinc-200 rounded-2xl rounded-bl-md px-4 py-2.5">
+				if event.Model != "" {
+					<span class="text-[10px] text-zinc-500 block mb-1">{ event.Model }</span>
+				}
+				<p class="text-sm leading-relaxed whitespace-pre-wrap">{ event.Content }</p>
+				<span class="text-[10px] text-zinc-500 mt-1 block">
+					if !event.Timestamp.IsZero() {
+						{ event.Timestamp.Format("15:04") }
+					}
+				</span>
 			</div>
 		</div>
 	}
 }
 
-// ConnectionStatus renders the connection status indicator (server-controlled)
-templ ConnectionStatus(connected bool) {
-	<span id="connection-status" class={ "stat-value", templ.KV("connected", connected) }>
-		<span class={ "status-dot", templ.KV("active", connected) }></span>
-		if connected {
-			<span>Live</span>
-		} else {
-			<span>Connecting...</span>
-		}
-	</span>
+// CompactionDivider renders a compaction separator.
+templ CompactionDivider() {
+	<div class="flex items-center gap-2 py-2">
+		<div class="h-px flex-1 bg-zinc-700 opacity-50"></div>
+		<span class="text-[10px] text-zinc-600 flex items-center gap-1">
+			<span>📦</span> compacted
+		</span>
+		<div class="h-px flex-1 bg-zinc-700 opacity-50"></div>
+	</div>
 }
 
-templ OrbSVG(x, y float64, intensity int) {
-	<svg id="orb-container" class="orb-svg" viewBox="0 0 200 200">
-		<defs>
-			<radialGradient id="orb-gradient" cx="50%" cy="50%" r="50%">
-				<stop offset="0%" style={ fmt.Sprintf("stop-color: hsl(%d, 80%%, 70%%)", 180 + intensity*2) }/>
-				<stop offset="50%" style={ fmt.Sprintf("stop-color: hsl(%d, 70%%, 50%%)", 220 + intensity) }/>
-				<stop offset="100%" style="stop-color: transparent"/>
-			</radialGradient>
-			<filter id="orb-glow" x="-50%" y="-50%" width="200%" height="200%">
-				<feGaussianBlur stdDeviation={ fmt.Sprintf("%d", 8 + intensity/10) } result="blur"/>
-				<feMerge>
-					<feMergeNode in="blur"/>
-					<feMergeNode in="SourceGraphic"/>
-				</feMerge>
-			</filter>
-		</defs>
-		<!-- Outer glow rings -->
-		<circle
-			cx="100" cy="100"
-			r={ fmt.Sprintf("%d", 70 + intensity/5) }
-			fill="none"
-			stroke={ fmt.Sprintf("hsla(%d, 80%%, 60%%, 0.1)", 200 + intensity) }
-			stroke-width="20"
-			class="ring ring-outer"
-		/>
-		<circle
-			cx="100" cy="100"
-			r={ fmt.Sprintf("%d", 55 + intensity/8) }
-			fill="none"
-			stroke={ fmt.Sprintf("hsla(%d, 70%%, 50%%, 0.2)", 260 + intensity) }
-			stroke-width="10"
-			class="ring ring-mid"
-		/>
-		<!-- Core orb with morphing path -->
-		<path
-			d={ generateOrbPath(x, y, intensity) }
-			fill="url(#orb-gradient)"
-			filter="url(#orb-glow)"
-			class="orb-core"
-		/>
-		<!-- Inner highlight -->
-		<ellipse
-			cx={ fmt.Sprintf("%.1f", 90 + x*20) }
-			cy={ fmt.Sprintf("%.1f", 90 + y*20) }
-			rx="15"
-			ry="12"
-			fill={ fmt.Sprintf("hsla(%d, 100%%, 90%%, 0.4)", 180 + intensity) }
-			class="orb-highlight"
-		/>
-	</svg>
-}
-
-func generateOrbPath(x, y float64, intensity int) string {
-	// Generate an organic blob shape that morphs based on position
-	cx, cy := 100.0, 100.0
-	baseR := 40.0 + float64(intensity)/10.0
-
-	// Offset based on mouse position
-	ox := (x - 0.5) * 20
-	oy := (y - 0.5) * 20
-
-	// Create bezier control points for organic shape
-	points := make([]struct{ x, y float64 }, 8)
-	for i := 0; i < 8; i++ {
-		angle := float64(i) * 0.785398 // 45 degrees in radians
-		variance := 1.0 + (float64(intensity)/100.0)*0.3
-		if i%2 == 0 {
-			variance = 1.0 - (float64(intensity)/100.0)*0.2
-		}
-		r := baseR * variance
-		points[i].x = cx + ox*0.5 + r*math.Cos(angle)
-		points[i].y = cy + oy*0.5 + r*math.Sin(angle)
+// OnboardPage renders the setup screen.
+templ OnboardPage() {
+	@Layout("ClawClient - Setup") {
+		<div class="min-h-screen flex items-center justify-center p-4">
+			<div class="w-full max-w-md"
+				data-signals="{gatewayUrl: '', authToken: '', connectStatus: '', connectError: ''}">
+				<div class="text-center mb-8">
+					<span class="text-5xl block mb-4">🦞</span>
+					<h1 class="text-2xl font-bold text-zinc-100 mb-2">ClawClient</h1>
+					<p class="text-zinc-400 text-sm">Connect to your OpenClaw Gateway</p>
+				</div>
+				<div class="bg-zinc-800 rounded-xl border border-zinc-700 p-6 space-y-4">
+					<div>
+						<label class="block text-sm font-medium text-zinc-300 mb-1.5">Gateway URL</label>
+						<input
+							type="text"
+							data-bind="gatewayUrl"
+							placeholder="ws://localhost:3200"
+							class="w-full bg-zinc-700 text-zinc-100 rounded-lg px-4 py-2.5 placeholder-zinc-500 border border-zinc-600 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-colors"
+						/>
+					</div>
+					<div>
+						<label class="block text-sm font-medium text-zinc-300 mb-1.5">Auth Token</label>
+						<input
+							type="password"
+							data-bind="authToken"
+							placeholder="Enter your auth token"
+							class="w-full bg-zinc-700 text-zinc-100 rounded-lg px-4 py-2.5 placeholder-zinc-500 border border-zinc-600 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-colors"
+						/>
+					</div>
+					<button
+						data-on:click="@post('/api/connect')"
+						class="w-full bg-blue-600 hover:bg-blue-500 text-white rounded-lg px-4 py-3 font-medium transition-colors mt-2"
+					>
+						Connect
+					</button>
+					<div id="connect-feedback"></div>
+				</div>
+			</div>
+		</div>
 	}
-
-	// Build smooth curve path
-	path := fmt.Sprintf("M %.1f %.1f", points[0].x, points[0].y)
-	for i := 0; i < 8; i++ {
-		next := (i + 1) % 8
-		cp1x := points[i].x + (points[next].x-points[i].x)*0.5
-		cp1y := points[i].y
-		cp2x := points[i].x + (points[next].x-points[i].x)*0.5
-		cp2y := points[next].y
-		path += fmt.Sprintf(" C %.1f %.1f %.1f %.1f %.1f %.1f", cp1x, cp1y, cp2x, cp2y, points[next].x, points[next].y)
-	}
-	path += " Z"
-	return path
 }
 
-
-templ ParticlesSVG(x, y float64) {
-	<svg id="particles" class="particles-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
-		for i := 0; i < 12; i++ {
-			@Particle(i, x, y)
-		}
-	</svg>
+// ConnectSuccess renders a success message after connecting.
+templ ConnectSuccess() {
+	<div id="connect-feedback" class="mt-4 bg-emerald-900/30 border border-emerald-700 rounded-lg p-3 text-center">
+		<span class="text-emerald-400 text-sm">✅ Connected successfully!</span>
+	</div>
 }
 
-templ Particle(index int, x, y float64) {
-	<!-- Each particle position calculated server-side -->
-	<circle
-		cx={ fmt.Sprintf("%.1f", 50 + (float64(index)*30 - 165) * x + float64(index%3)*10) }
-		cy={ fmt.Sprintf("%.1f", 50 + (float64(index)*25 - 137) * y + float64(index%4)*8) }
-		r={ fmt.Sprintf("%.1f", 1.5 + float64(index%3)*0.5) }
-		fill={ fmt.Sprintf("hsla(%d, 80%%, 70%%, %.1f)", 180 + index*15, 0.3 + float64(index%5)*0.15) }
-		class="particle"
-		style={ fmt.Sprintf("animation-delay: %dms", index * 150) }
-	/>
+// ConnectError renders an error message.
+templ ConnectError(msg string) {
+	<div id="connect-feedback" class="mt-4 bg-red-900/30 border border-red-700 rounded-lg p-3 text-center">
+		<span class="text-red-400 text-sm">❌ { msg }</span>
+	</div>
 }
 
-templ ConnectionPaths(x, y float64) {
-	<g id="connections" class="connection-group">
-		for i := 0; i < 5; i++ {
-			<path
-				d={ generateConnectionPath(i, x, y) }
-				stroke={ fmt.Sprintf("hsla(%d, 70%%, 60%%, %.2f)", 200 + i*20, 0.1 + float64(i)*0.05) }
-				stroke-width="0.3"
-				fill="none"
-				class="connection-line"
-				style={ fmt.Sprintf("animation-delay: %dms", i * 200) }
-			/>
-		}
-	</g>
+// ConnectLoading renders a connecting state.
+templ ConnectLoading() {
+	<div id="connect-feedback" class="mt-4 bg-zinc-700/50 rounded-lg p-3 text-center flex items-center justify-center gap-2">
+		<div class="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+		<span class="text-zinc-400 text-sm">Connecting...</span>
+	</div>
 }
 
-func generateConnectionPath(index int, x, y float64) string {
-	// Generate flowing bezier curves from edges toward center
-	startX := float64(index) * 25.0
-	startY := 0.0
-	if index%2 == 1 {
-		startY = 100.0
-	}
-
-	endX := 50.0 + (x-0.5)*20
-	endY := 50.0 + (y-0.5)*20
-
-	cpX := startX + (endX-startX)*0.5 + float64(index)*5
-	cpY := startY + (endY-startY)*0.3
-
-	return fmt.Sprintf("M %.1f %.1f Q %.1f %.1f %.1f %.1f", startX, startY, cpX, cpY, endX, endY)
-}
-
-templ Greeting(name string) {
-	<span id="greeting-output" class="font-medium">Hello, { name }!</span>
-}
-
-templ PulseStats(count int, latencyMs int) {
-	<span id="pulse-count" class="stat-value mono">{ fmt.Sprintf("%d", count) }</span>
-	<span id="latency" class="stat-value mono">{ fmt.Sprintf("%dms", latencyMs) }</span>
+// StreamingMessage renders a message being streamed from an agent.
+templ StreamingMessage(content string) {
+	<div id="streaming-message" class="flex justify-start">
+		<div class="max-w-[80%] bg-zinc-800 border border-zinc-700 text-zinc-200 rounded-2xl rounded-bl-md px-4 py-2.5">
+			<div class="flex items-center gap-2 mb-1">
+				<div class="w-2 h-2 rounded-full bg-blue-400 animate-pulse"></div>
+				<span class="text-[10px] text-zinc-500">Thinking...</span>
+			</div>
+			<p class="text-sm leading-relaxed whitespace-pre-wrap">{ content }</p>
+		</div>
+	</div>
 }

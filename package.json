@@ -7,6 +7,7 @@
     "css:watch": "tailwindcss -i ./static/css/input.css -o ./static/css/output.css --watch"
   },
   "devDependencies": {
-    "@tailwindcss/cli": "^4.0.0"
+    "@tailwindcss/cli": "^4.1.18",
+    "tailwindcss": "^4.1.18"
   }
 }

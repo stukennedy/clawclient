@@ -8,28 +8,20 @@ import (
 
 	"clawclient/handlers"
 	"clawclient/static"
-	"clawclient/templates"
-	"github.com/stukennedy/irgo/pkg/render"
 	"github.com/stukennedy/irgo/pkg/router"
 )
-
-var Renderer = render.NewTemplRenderer()
 
 // NewRouter creates a new router with all app routes configured.
 func NewRouter() *router.Router {
 	r := router.New()
 
-	// Serve embedded static files (works for both web and mobile)
+	// Serve embedded static files
 	staticFS, _ := fs.Sub(static.Files, ".")
 	r.Static("/static", http.FS(staticFS))
 
-	// Home page
-	r.GET("/", func(ctx *router.Context) (string, error) {
-		return Renderer.Render(templates.HomePage())
-	})
-
-	// Mount handlers
-	handlers.Mount(r)
+	// Create app and mount handlers
+	app := handlers.NewApp()
+	app.Mount(r)
 
 	return r
 }

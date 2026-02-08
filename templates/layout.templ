@@ -15,7 +15,7 @@ templ Layout(title string) {
 			<link rel="stylesheet" href="/static/css/output.css"/>
 			<script type="module" src="/static/js/datastar.js"></script>
 		</head>
-		<body class="bg-gray-100 min-h-screen">
+		<body class="bg-zinc-900 text-zinc-100 min-h-screen flex flex-col">
 			{ children... }
 			if DevMode {
 				@livereloadScript()
@@ -28,68 +28,87 @@ templ livereloadScript() {
 	<script>
 (function() {
   if (typeof window === 'undefined') return;
-
   var buildTime = null;
   var retryDelay = 1000;
   var maxRetryDelay = 5000;
-
   function connect() {
     var es = new EventSource('/dev/livereload');
-
     es.addEventListener('buildtime', function(e) {
       var serverBuildTime = e.data;
       if (buildTime !== null && buildTime !== serverBuildTime) {
-        console.log('[livereload] Server restarted, reloading...');
         window.location.reload();
       }
       buildTime = serverBuildTime;
       retryDelay = 1000;
     });
-
     es.addEventListener('reload', function(e) {
-      console.log('[livereload] Reload signal received');
       window.location.reload();
     });
-
     es.onerror = function() {
       es.close();
-      console.log('[livereload] Connection lost, reconnecting in ' + retryDelay + 'ms...');
       setTimeout(connect, retryDelay);
       retryDelay = Math.min(retryDelay * 1.5, maxRetryDelay);
     };
   }
-
   connect();
 })();
 </script>
 }
 
-templ Page(title string) {
+templ AppShell(title string, connected bool) {
 	@Layout(title) {
-		<div class="max-w-2xl mx-auto p-4">
+		<!-- Top Bar -->
+		<header class="flex items-center justify-between px-4 py-3 bg-zinc-800 border-b border-zinc-700 shrink-0">
+			<div class="flex items-center gap-2">
+				<span class="text-xl">🦞</span>
+				<span class="font-semibold text-lg text-zinc-100">ClawClient</span>
+			</div>
+			<div class="flex items-center gap-3">
+				<div id="connection-status" data-init="@get('/api/status')">
+					@ConnectionDot(connected)
+				</div>
+				<a href="/onboard" class="text-zinc-400 hover:text-zinc-200 transition-colors">
+					<svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+						<path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+						<path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+					</svg>
+				</a>
+			</div>
+		</header>
+		<!-- Main Content Area -->
+		<main id="main-content" class="flex-1 overflow-y-auto">
 			{ children... }
-		</div>
+		</main>
+		<!-- Message Input Bar -->
+		<footer class="shrink-0 bg-zinc-800 border-t border-zinc-700 px-4 py-3"
+			data-signals="{messageInput: ''}">
+			<div class="flex items-center gap-2 max-w-4xl mx-auto">
+				<input
+					type="text"
+					data-bind="messageInput"
+					data-on:keydown.enter="@post('/api/send')"
+					placeholder="Send a message..."
+					class="flex-1 bg-zinc-700 text-zinc-100 rounded-lg px-4 py-2.5 placeholder-zinc-400 border border-zinc-600 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-colors"
+				/>
+				<button
+					data-on:click="@post('/api/send')"
+					class="bg-blue-600 hover:bg-blue-500 text-white rounded-lg px-4 py-2.5 font-medium transition-colors shrink-0"
+				>
+					Send
+				</button>
+			</div>
+		</footer>
 	}
 }
 
-// FullscreenPage provides a layout for immersive full-screen experiences
-templ FullscreenPage(title string) {
-	<!DOCTYPE html>
-	<html lang="en">
-		<head>
-			<meta charset="UTF-8"/>
-			<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover"/>
-			<meta name="mobile-web-app-capable" content="yes"/>
-			<meta name="apple-mobile-web-app-capable" content="yes"/>
-			<title>{ title }</title>
-			<link rel="stylesheet" href="/static/css/output.css"/>
-			<script type="module" src="/static/js/datastar.js"></script>
-		</head>
-		<body>
-			{ children... }
-			if DevMode {
-				@livereloadScript()
-			}
-		</body>
-	</html>
+templ ConnectionDot(connected bool) {
+	<div id="connection-status" class="flex items-center gap-1.5">
+		if connected {
+			<span class="w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.6)]"></span>
+			<span class="text-xs text-zinc-400">Connected</span>
+		} else {
+			<span class="w-2.5 h-2.5 rounded-full bg-zinc-500"></span>
+			<span class="text-xs text-zinc-500">Offline</span>
+		}
+	</div>
 }
