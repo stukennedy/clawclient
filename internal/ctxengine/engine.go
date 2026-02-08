@@ -9,6 +9,8 @@ import (
 	"sort"
 	"sync"
 	"time"
+
+	contentparser "clawclient/internal/content"
 )
 
 // Engine manages conversation contexts and their events.
@@ -261,11 +263,20 @@ func (e *Engine) ContextMeta(name string) (displayName string, color string) {
 	return name, ColorFromName(name)
 }
 
+// MediaAttachment represents a parsed media file for template rendering.
+type MediaAttachment struct {
+	URL      string // Served URL e.g. /media/inbound/abc.jpg
+	MimeType string
+	IsImage  bool
+}
+
 // FeedMessage is a message enriched with context info for the main feed.
 type FeedMessage struct {
-	Event       Event
-	ContextKey  string // e.g. "project-clawclient"
-	ContextName string // e.g. "ClawClient"
+	Event        Event
+	CleanContent string // Parsed content with system metadata stripped
+	Media        []MediaAttachment
+	ContextKey   string // e.g. "project-clawclient"
+	ContextName  string // e.g. "ClawClient"
 	ContextColor string
 }
 
@@ -329,8 +340,21 @@ func (e *Engine) GetFeed() []FeedMessage {
 				}
 			}
 
+			// Parse content to extract media and strip system metadata
+			parsed := contentparser.Parse(ev.Content)
+			var media []MediaAttachment
+			for _, m := range parsed.Media {
+				media = append(media, MediaAttachment{
+					URL:      m.URL,
+					MimeType: m.MimeType,
+					IsImage:  m.IsImage(),
+				})
+			}
+
 			feed = append(feed, FeedMessage{
 				Event:        ev,
+				CleanContent: parsed.Text,
+				Media:        media,
 				ContextKey:   ctxKey,
 				ContextName:  ctxName,
 				ContextColor: ctxColor,
@@ -355,6 +379,10 @@ func (e *Engine) GetContextList() []*Context {
 
 	var list []*Context
 	for _, ctx := range e.contexts {
+		// Skip "main" — it's the root feed, not a real context
+		if ctx.Name == "main" {
+			continue
+		}
 		list = append(list, ctx)
 	}
 	sort.Slice(list, func(i, j int) bool {

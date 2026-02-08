@@ -19,6 +19,9 @@ func NewRouter() *router.Router {
 	staticFS, _ := fs.Sub(static.Files, ".")
 	r.Static("/static", http.FS(staticFS))
 
+	// Serve media files from clawdbot media directory
+	r.Static("/media", http.Dir("/home/stu/.clawdbot/media"))
+
 	// Create app and mount handlers
 	app := handlers.NewApp()
 	app.Mount(r)

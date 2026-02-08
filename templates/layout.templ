@@ -17,7 +17,7 @@ templ Layout(title string) {
 			<script type="module" src="/static/js/datastar.js"></script>
 			<script defer src="/static/js/app.js"></script>
 		</head>
-		<body class="bg-zinc-900 text-zinc-100 flex flex-col" style="height: 100dvh; height: -webkit-fill-available; overflow: hidden;">
+		<body class="flex flex-col" style="height: 100dvh; height: -webkit-fill-available; overflow: hidden; background: var(--color-void); color: var(--color-text-primary);">
 			{ children... }
 			if DevMode {
 				@livereloadScript()
@@ -61,25 +61,25 @@ templ AppShell(title string, connected bool) {
 	@Layout(title) {
 		<div class="flex flex-col flex-1 min-h-0" data-signals="{messageInput: '', activeThread: ''}">
 			<!-- Top Bar -->
-			<header class="flex items-center justify-between px-4 py-3 bg-zinc-800 border-b border-zinc-700 shrink-0 relative z-30">
+			<header class="flex items-center justify-between px-3 py-3 shrink-0 relative z-30" style="background: linear-gradient(180deg, var(--color-surface) 0%, rgba(21,21,32,0.95) 100%); backdrop-filter: blur(12px); border-bottom: 1px solid var(--color-border);">
 				<div class="flex items-center gap-2">
 					<!-- Context menu toggle (plain JS) -->
 					<button
 						onclick="var m=document.getElementById('ctx-menu');m.classList.toggle('hidden');event.stopPropagation();"
-						class="text-zinc-400 hover:text-zinc-200 transition-colors p-1 -ml-1"
+						class="p-2 rounded-lg transition-colors" style="color: var(--color-text-secondary);"
 					>
 						<svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 							<path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/>
 						</svg>
 					</button>
 					<span class="text-xl">🦞</span>
-					<span class="font-semibold text-lg text-zinc-100">ClawClient</span>
+					<span class="font-display font-bold text-lg" style="font-family: var(--font-display); letter-spacing: -0.02em;">ClawClient</span>
 				</div>
 				<div class="flex items-center gap-3">
 					<div id="connection-status" data-init="@get('/api/status')">
 						@ConnectionDot(connected)
 					</div>
-					<a href="/onboard" class="text-zinc-400 hover:text-zinc-200 transition-colors">
+					<a href="/onboard" class="p-2 rounded-lg transition-colors" style="color: var(--color-text-secondary);">
 						<svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 							<path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
 							<path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
@@ -92,15 +92,23 @@ templ AppShell(title string, connected bool) {
 				<!-- Backdrop -->
 				<div onclick="document.getElementById('ctx-menu').classList.add('hidden')" class="fixed inset-0 z-40"></div>
 				<!-- Menu panel -->
-				<div class="relative z-50 bg-zinc-800 border-b border-zinc-700 shadow-2xl max-h-72 overflow-y-auto">
+				<div class="relative z-50 shadow-2xl max-h-72 overflow-y-auto" style="background: var(--color-surface); border-bottom: 1px solid var(--color-border);">
 					<!-- All Messages -->
 					<button
 						onclick="document.getElementById('ctx-menu').classList.add('hidden')"
 						data-on:click="$activeThread = ''; @get('/api/timeline')"
-						class="w-full text-left px-5 py-3.5 hover:bg-zinc-700/50 transition-colors flex items-center gap-3 border-b border-zinc-700/50"
+						class="w-full text-left px-5 py-3.5 transition-colors flex items-center gap-3" style="border-bottom: 1px solid var(--color-border);"
 					>
-						<span class="text-base">💬</span>
-						<span class="text-sm font-medium text-zinc-200">All Messages</span>
+						<svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="url(#allMsgGrad)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+							<defs>
+								<linearGradient id="allMsgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+									<stop offset="0%" stop-color="#a855f7"/>
+									<stop offset="100%" stop-color="#ec4899"/>
+								</linearGradient>
+							</defs>
+							<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+						</svg>
+						<span class="text-sm font-semibold gradient-text">All Messages</span>
 					</button>
 					<!-- Context list -->
 					<div id="context-list" data-init="@get('/api/contexts')">
@@ -111,23 +119,24 @@ templ AppShell(title string, connected bool) {
 				</div>
 			</div>
 			<!-- Main Content Area -->
-			<main id="main-content" class="flex-1 min-h-0">
+			<main id="main-content" class="flex-1 min-h-0 overflow-hidden flex flex-col">
 				{ children... }
 			</main>
 			<!-- Message Input Bar -->
-			<footer class="shrink-0 bg-zinc-800 border-t border-zinc-700 px-3 py-2">
+			<footer class="shrink-0 px-3 py-3" style="background: linear-gradient(0deg, var(--color-surface) 0%, rgba(21,21,32,0.95) 100%); backdrop-filter: blur(12px); border-top: 1px solid var(--color-border);">
 				<div class="flex items-end gap-2 max-w-4xl mx-auto">
 					<textarea
 						rows="1"
 						data-bind="messageInput"
 						data-on:keydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();@post('/api/send')}"
 						placeholder="Message..."
-						class="chat-input flex-1 bg-zinc-700 text-zinc-100 rounded-2xl px-4 py-2.5 placeholder-zinc-400 border border-zinc-600 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-colors resize-none leading-snug"
-						style="max-height: 150px; min-height: 40px;"
+						class="chat-input flex-1 rounded-2xl px-4 py-3 resize-none leading-snug transition-all outline-none"
+						style="max-height: 120px; min-height: var(--input-height); background: var(--color-void); border: 2px solid var(--color-border); color: var(--color-text-primary);"
 					></textarea>
 					<button
 						data-on:click="@post('/api/send')"
-						class="bg-blue-600 hover:bg-blue-500 text-white rounded-full w-10 h-10 flex items-center justify-center transition-colors shrink-0 mb-0.5"
+						class="text-white rounded-2xl flex items-center justify-center transition-all shrink-0"
+						style="width: var(--input-height); height: var(--input-height); background: var(--gradient-accent); box-shadow: var(--shadow-md);"
 					>
 						<svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
 							<path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
@@ -142,11 +151,11 @@ templ AppShell(title string, connected bool) {
 templ ConnectionDot(connected bool) {
 	<div id="connection-status" class="flex items-center gap-1.5">
 		if connected {
-			<span class="w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.6)]"></span>
-			<span class="text-xs text-zinc-400">Connected</span>
+			<span class="w-2.5 h-2.5 rounded-full" style="background: var(--color-success); box-shadow: 0 0 8px rgba(16,185,129,0.5); animation: pulse-status 2s ease-in-out infinite;"></span>
+			<span class="text-xs" style="color: var(--color-text-secondary);">Connected</span>
 		} else {
-			<span class="w-2.5 h-2.5 rounded-full bg-zinc-500"></span>
-			<span class="text-xs text-zinc-500">Offline</span>
+			<span class="w-2.5 h-2.5 rounded-full" style="background: var(--color-text-tertiary);"></span>
+			<span class="text-xs" style="color: var(--color-text-tertiary);">Offline</span>
 		}
 	</div>
 }

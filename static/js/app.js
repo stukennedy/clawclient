@@ -1,7 +1,6 @@
 // ClawClient Application JavaScript
 
 // --- Markdown Rendering ---
-// Render all .msg-content elements after DOM updates
 function renderMarkdown() {
   document.querySelectorAll('.msg-markdown:not([data-rendered])').forEach(el => {
     if (typeof marked !== 'undefined') {
@@ -12,12 +11,42 @@ function renderMarkdown() {
   });
 }
 
-// Run on page load and after Datastar patches
+// --- Auto-scroll to bottom of message list ---
+var _lastMessageCount = 0;
+
+function scrollToBottom() {
+  var list = document.getElementById('message-list');
+  if (!list) return;
+
+  var count = list.children.length;
+  if (count !== _lastMessageCount) {
+    _lastMessageCount = count;
+    // Find the scroll container (parent with overflow-y-auto)
+    var container = list.closest('.overflow-y-auto') || list.parentElement;
+    if (container) {
+      requestAnimationFrame(function() {
+        container.scrollTop = container.scrollHeight;
+      });
+    }
+  }
+}
+
+// --- Combined DOM observer ---
+// Fires on any DOM mutation — handles markdown, scroll, textarea init
 const observer = new MutationObserver(() => {
-  requestAnimationFrame(renderMarkdown);
+  requestAnimationFrame(() => {
+    renderMarkdown();
+    scrollToBottom();
+    initTextarea();
+  });
 });
 observer.observe(document.body, { childList: true, subtree: true });
-document.addEventListener('DOMContentLoaded', renderMarkdown);
+
+document.addEventListener('DOMContentLoaded', () => {
+  renderMarkdown();
+  scrollToBottom();
+  initTextarea();
+});
 
 // --- Textarea Auto-resize ---
 function autoResize(textarea) {
@@ -25,22 +54,10 @@ function autoResize(textarea) {
   textarea.style.height = Math.min(textarea.scrollHeight, 150) + 'px';
 }
 
-// Initialize textarea behavior on any .chat-input
-document.addEventListener('DOMContentLoaded', () => {
-  initTextarea();
-});
-
-// Re-init after DOM changes (Datastar patches)
-const textareaObserver = new MutationObserver(() => {
-  initTextarea();
-});
-textareaObserver.observe(document.body, { childList: true, subtree: true });
-
 function initTextarea() {
   document.querySelectorAll('.chat-input:not([data-init])').forEach(ta => {
     ta.setAttribute('data-init', '1');
     ta.addEventListener('input', () => autoResize(ta));
-    // Reset height after send (content cleared by Datastar)
     const obs = new MutationObserver(() => {
       if (ta.value === '') {
         ta.style.height = 'auto';

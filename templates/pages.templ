@@ -8,7 +8,7 @@ import (
 // HomePage renders the main timeline view.
 templ HomePage() {
 	@AppShell("ClawClient", false) {
-		<div id="main-view" class="h-full flex flex-col"
+		<div id="main-view" class="flex-1 min-h-0 flex flex-col"
 			data-init="@get('/api/timeline')">
 			@TimelineLoading()
 		</div>
@@ -49,7 +49,7 @@ templ TimelineView(blocks []ctxengine.TimelineBlock) {
 
 // FeedView renders the unified feed — all messages chronologically with context colors.
 templ FeedView(feed []ctxengine.FeedMessage) {
-	<div id="main-view" class="flex flex-col h-full"
+	<div id="main-view" class="flex flex-col flex-1 min-h-0"
 		data-signals="{activeThread: ''}">
 		<div class="flex-1 overflow-y-auto px-4 py-4">
 			<div id="message-list" class="space-y-3 max-w-4xl mx-auto">
@@ -58,7 +58,8 @@ templ FeedView(feed []ctxengine.FeedMessage) {
 					<div class="flex justify-center py-2">
 						<button
 							data-on:click="@get('/api/loadmore')"
-							class="text-xs text-zinc-500 hover:text-zinc-300 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-full px-4 py-1.5 transition-colors"
+							class="text-xs rounded-full px-4 py-1.5 transition-colors"
+							style="color: var(--color-text-tertiary); background: var(--color-surface); border: 1px solid var(--color-border);"
 						>
 							↑ Load earlier messages
 						</button>
@@ -72,12 +73,6 @@ templ FeedView(feed []ctxengine.FeedMessage) {
 				}
 			</div>
 		</div>
-		<script>
-			requestAnimationFrame(function() {
-				var container = document.querySelector('.overflow-y-auto');
-				if (container) container.scrollTop = container.scrollHeight;
-			});
-		</script>
 	</div>
 }
 
@@ -86,20 +81,26 @@ templ FeedBubble(msg ctxengine.FeedMessage) {
 	if msg.Event.Role == "user" {
 		<div id={ "msg-" + msg.Event.ID } class="flex justify-end">
 			<div class="max-w-[80%]">
-				<div class="bg-blue-600 text-white rounded-2xl rounded-br-md px-4 py-2.5"
-					style={ fmt.Sprintf("border-left: 3px solid %s", msg.ContextColor) }>
-					<p class="text-sm leading-relaxed whitespace-pre-wrap">{ msg.Event.Content }</p>
-					<div class="flex items-center justify-end gap-2 mt-1">
+				<div class="text-white px-4 py-3" style={ fmt.Sprintf("background: var(--gradient-user-bubble); border-radius: 18px 18px 4px 18px; box-shadow: var(--shadow-md); border-left: 3px solid %s", msg.ContextColor) }>
+					for _, m := range msg.Media {
+						if m.IsImage && m.URL != "" {
+							<img src={ m.URL } alt="attachment" class="rounded-lg max-w-full mb-2" style="max-height: 300px; object-fit: contain;"/>
+						}
+					}
+					if msg.CleanContent != "" {
+						<div class="msg-markdown msg-markdown--user text-sm leading-relaxed max-w-none">{ msg.CleanContent }</div>
+					}
+					<div class="flex items-center justify-end gap-2 mt-1.5">
 						<button
 							data-on:click={ fmt.Sprintf("@get('/api/thread/%s')", msg.ContextKey) }
-							class="text-[10px] text-blue-200 hover:text-white transition-colors flex items-center gap-1"
+							class="text-[10px] opacity-80 hover:opacity-100 transition-opacity flex items-center gap-1"
 							style={ fmt.Sprintf("border-bottom: 1px solid %s", msg.ContextColor) }
 						>
 							<span class="w-1.5 h-1.5 rounded-full inline-block" style={ fmt.Sprintf("background: %s", msg.ContextColor) }></span>
 							{ msg.ContextName }
 						</button>
 						if !msg.Event.Timestamp.IsZero() {
-							<span class="text-[10px] text-blue-200">{ msg.Event.Timestamp.Format("15:04") }</span>
+							<span class="text-[10px] opacity-70">{ msg.Event.Timestamp.Format("15:04") }</span>
 						}
 					</div>
 				</div>
@@ -108,23 +109,27 @@ templ FeedBubble(msg ctxengine.FeedMessage) {
 	} else {
 		<div id={ "msg-" + msg.Event.ID } class="flex justify-start">
 			<div class="max-w-[85%]">
-				<div class="bg-zinc-800 border border-zinc-700 text-zinc-200 rounded-2xl rounded-bl-md px-4 py-2.5"
-					style={ fmt.Sprintf("border-left: 3px solid %s", msg.ContextColor) }>
+				<div class="px-4 py-3" style={ fmt.Sprintf("background: var(--color-surface); border: 1px solid var(--color-border); color: var(--color-text-primary); border-radius: 18px 18px 18px 4px; box-shadow: var(--shadow-sm); border-left: 3px solid %s", msg.ContextColor) }>
 					if msg.Event.Model != "" {
-						<span class="text-[10px] text-zinc-500 block mb-1">{ msg.Event.Model }</span>
+						<span class="text-[10px] block mb-1" style="color: var(--color-text-tertiary);">{ msg.Event.Model }</span>
 					}
-					<div class="msg-markdown text-sm leading-relaxed prose prose-invert prose-sm max-w-none prose-p:my-1 prose-pre:my-2 prose-ul:my-1 prose-ol:my-1 prose-li:my-0.5 prose-headings:my-2 prose-code:text-emerald-400 prose-code:bg-zinc-700/50 prose-code:px-1 prose-code:rounded prose-pre:bg-zinc-900 prose-pre:border prose-pre:border-zinc-700 prose-a:text-blue-400">{ msg.Event.Content }</div>
-					<div class="flex items-center gap-2 mt-1">
+					for _, m := range msg.Media {
+						if m.IsImage && m.URL != "" {
+							<img src={ m.URL } alt="attachment" class="rounded-lg max-w-full mb-2" style="max-height: 300px; object-fit: contain;"/>
+						}
+					}
+					<div class="msg-markdown text-sm leading-relaxed max-w-none">{ msg.CleanContent }</div>
+					<div class="flex items-center gap-2 mt-1.5">
 						<button
 							data-on:click={ fmt.Sprintf("@get('/api/thread/%s')", msg.ContextKey) }
-							class="text-[10px] text-zinc-500 hover:text-zinc-300 transition-colors flex items-center gap-1"
+							class="text-[10px] transition-colors flex items-center gap-1" style="color: var(--color-text-tertiary);"
 							style={ fmt.Sprintf("border-bottom: 1px solid %s", msg.ContextColor) }
 						>
 							<span class="w-1.5 h-1.5 rounded-full inline-block" style={ fmt.Sprintf("background: %s", msg.ContextColor) }></span>
 							{ msg.ContextName }
 						</button>
 						if !msg.Event.Timestamp.IsZero() {
-							<span class="text-[10px] text-zinc-500">{ msg.Event.Timestamp.Format("15:04") }</span>
+							<span class="text-[10px]" style="color: var(--color-text-tertiary);">{ msg.Event.Timestamp.Format("15:04") }</span>
 						}
 					</div>
 				</div>
@@ -154,30 +159,30 @@ templ TimelineBlocks(blocks []ctxengine.TimelineBlock) {
 // DateHeader renders a date divider.
 templ DateHeader(date string) {
 	<div class="flex items-center gap-3 py-3">
-		<div class="h-px flex-1 bg-zinc-700"></div>
-		<span class="text-xs font-medium text-zinc-500 uppercase tracking-wider">{ date }</span>
-		<div class="h-px flex-1 bg-zinc-700"></div>
+		<div class="h-px flex-1" style="background: var(--color-border);"></div>
+		<span class="text-xs font-medium uppercase tracking-wider" style="color: var(--color-text-tertiary);">{ date }</span>
+		<div class="h-px flex-1" style="background: var(--color-border);"></div>
 	</div>
 }
 
 // ContextBlock renders a single context block on the timeline.
 templ ContextBlock(block ctxengine.TimelineBlock) {
 	<div
-		class="bg-zinc-800 rounded-lg border border-zinc-700 hover:border-zinc-600 transition-colors cursor-pointer overflow-hidden"
-		style={ fmt.Sprintf("border-left: 4px solid %s", block.Context.Color) }
+		class="rounded-lg transition-colors cursor-pointer overflow-hidden"
+		style={ fmt.Sprintf("background: var(--color-surface); border: 1px solid var(--color-border); border-left: 4px solid %s", block.Context.Color) }
 		data-on:click={ fmt.Sprintf("@get('/api/thread/%s')", block.Context.Name) }
 	>
 		<div class="px-4 py-3">
 			<div class="flex items-center justify-between mb-1">
-				<h3 class="font-medium text-zinc-200 text-sm">{ block.Context.Name }</h3>
-				<span class="text-xs text-zinc-500">
+				<h3 class="font-medium text-sm" style="color: var(--color-text-primary);">{ block.Context.Name }</h3>
+				<span class="text-xs" style="color: var(--color-text-tertiary);">
 					if !block.Context.LastEvent.IsZero() {
 						{ block.Context.LastEvent.Format("15:04") }
 					}
 				</span>
 			</div>
 			if block.Preview != "" {
-				<p class="text-zinc-400 text-sm leading-relaxed line-clamp-2">{ block.Preview }</p>
+				<p class="text-sm leading-relaxed line-clamp-2" style="color: var(--color-text-secondary);">{ block.Preview }</p>
 			}
 			if len(block.AgentBadges) > 0 {
 				<div class="flex flex-wrap gap-1.5 mt-2">
@@ -218,19 +223,19 @@ templ AgentBadge(agent ctxengine.AgentSpawn) {
 
 // ThreadView renders just the thread content (inner content for #main-view).
 templ ThreadView(thread *ctxengine.Context) {
-	<div class="flex flex-col h-full">
+	<div class="flex flex-col flex-1 min-h-0">
 		<!-- Thread Header -->
-		<div class="flex items-center gap-3 px-4 py-3 bg-zinc-800 border-b border-zinc-700 shrink-0">
+		<div class="flex items-center gap-3 px-4 py-3 shrink-0" style="background: var(--color-surface); border-bottom: 1px solid var(--color-border);">
 			<button
 				data-on:click="@get('/api/timeline')"
-				class="text-zinc-400 hover:text-zinc-200 transition-colors"
+				class="transition-colors p-1" style="color: var(--color-text-secondary);"
 			>
 				<svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 					<path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
 				</svg>
 			</button>
 			<div class="w-3 h-3 rounded-full shrink-0" style={ fmt.Sprintf("background: %s", thread.Color) }></div>
-			<h2 class="font-semibold text-zinc-200">{ thread.Name }</h2>
+			<h2 class="font-semibold" style="color: var(--color-text-primary); font-family: var(--font-display);">{ thread.Name }</h2>
 		</div>
 		<!-- Thread Content -->
 		<div class="flex-1 overflow-y-auto px-4 py-4 space-y-4">
@@ -262,27 +267,20 @@ templ ThreadView(thread *ctxengine.Context) {
 
 // ThreadPage renders the thread view that replaces #main-view (for navigation).
 templ ThreadPage(thread *ctxengine.Context) {
-	<div id="main-view" class="flex flex-col h-full"
+	<div id="main-view" class="flex flex-col flex-1 min-h-0"
 		data-signals={ fmt.Sprintf("{activeThread: '%s'}", thread.Name) }>
 		@ThreadView(thread)
-		<script>
-			// Auto-scroll to bottom of thread
-			requestAnimationFrame(function() {
-				var container = document.querySelector('.overflow-y-auto');
-				if (container) container.scrollTop = container.scrollHeight;
-			});
-		</script>
 	</div>
 }
 
 // StatusCard renders STATUS.md content as a pinned card.
 templ StatusCard(content string) {
-	<div class="bg-zinc-800 border border-zinc-700 rounded-lg p-4 mb-4">
+	<div class="rounded-lg p-4 mb-4" style="background: var(--color-surface); border: 1px solid var(--color-border);">
 		<div class="flex items-center gap-2 mb-2">
 			<span class="text-sm">📌</span>
-			<span class="text-xs font-medium text-zinc-400 uppercase tracking-wider">Status</span>
+			<span class="text-xs font-medium uppercase tracking-wider" style="color: var(--color-text-tertiary);">Status</span>
 		</div>
-		<div class="text-sm text-zinc-300 leading-relaxed prose prose-invert prose-sm max-w-none">
+		<div class="text-sm leading-relaxed" style="color: var(--color-text-secondary);">
 			{ content }
 		</div>
 	</div>
@@ -292,9 +290,9 @@ templ StatusCard(content string) {
 templ MessageBubble(event ctxengine.Event) {
 	if event.Role == "user" {
 		<div class="flex justify-end">
-			<div class="max-w-[85%] bg-blue-600 text-white rounded-2xl rounded-br-md px-4 py-2.5">
-				<p class="text-sm leading-relaxed whitespace-pre-wrap">{ event.Content }</p>
-				<span class="text-[10px] text-blue-200 mt-1 block text-right">
+			<div class="max-w-[85%] text-white px-4 py-3" style="background: var(--gradient-user-bubble); border-radius: 18px 18px 4px 18px; box-shadow: var(--shadow-md);">
+				<div class="msg-markdown msg-markdown--user text-sm leading-relaxed max-w-none">{ event.Content }</div>
+				<span class="text-[10px] opacity-70 mt-1 block text-right">
 					if !event.Timestamp.IsZero() {
 						{ event.Timestamp.Format("15:04") }
 					}
@@ -303,12 +301,12 @@ templ MessageBubble(event ctxengine.Event) {
 		</div>
 	} else {
 		<div class="flex justify-start">
-			<div class="max-w-[85%] bg-zinc-800 border border-zinc-700 text-zinc-200 rounded-2xl rounded-bl-md px-4 py-2.5">
+			<div class="max-w-[85%] px-4 py-3" style="background: var(--color-surface); border: 1px solid var(--color-border); color: var(--color-text-primary); border-radius: 18px 18px 18px 4px; box-shadow: var(--shadow-sm);">
 				if event.Model != "" {
-					<span class="text-[10px] text-zinc-500 block mb-1">{ event.Model }</span>
+					<span class="text-[10px] block mb-1" style="color: var(--color-text-tertiary);">{ event.Model }</span>
 				}
-				<div class="msg-markdown text-sm leading-relaxed prose prose-invert prose-sm max-w-none prose-p:my-1 prose-pre:my-2 prose-ul:my-1 prose-ol:my-1 prose-li:my-0.5 prose-headings:my-2 prose-code:text-emerald-400 prose-code:bg-zinc-700/50 prose-code:px-1 prose-code:rounded prose-pre:bg-zinc-900 prose-pre:border prose-pre:border-zinc-700 prose-a:text-blue-400">{ event.Content }</div>
-				<span class="text-[10px] text-zinc-500 mt-1 block">
+				<div class="msg-markdown text-sm leading-relaxed max-w-none">{ event.Content }</div>
+				<span class="text-[10px] mt-1 block" style="color: var(--color-text-tertiary);">
 					if !event.Timestamp.IsZero() {
 						{ event.Timestamp.Format("15:04") }
 					}
@@ -321,11 +319,11 @@ templ MessageBubble(event ctxengine.Event) {
 // CompactionDivider renders a compaction separator.
 templ CompactionDivider() {
 	<div class="flex items-center gap-2 py-2">
-		<div class="h-px flex-1 bg-zinc-700 opacity-50"></div>
-		<span class="text-[10px] text-zinc-600 flex items-center gap-1">
+		<div class="h-px flex-1 opacity-50" style="background: var(--color-border);"></div>
+		<span class="text-[10px] flex items-center gap-1" style="color: var(--color-text-tertiary);">
 			<span>📦</span> compacted
 		</span>
-		<div class="h-px flex-1 bg-zinc-700 opacity-50"></div>
+		<div class="h-px flex-1 opacity-50" style="background: var(--color-border);"></div>
 	</div>
 }
 
@@ -339,18 +337,19 @@ templ ContextList(contexts []*ctxengine.Context) {
 			<button
 				onclick="document.getElementById('ctx-menu').classList.add('hidden')"
 				data-on:click={ fmt.Sprintf("@get('/api/thread/%s')", ctx.Name) }
-				class="w-full text-left px-5 py-3.5 hover:bg-zinc-700/50 transition-colors flex items-center gap-3 border-b border-zinc-700/30"
+				class="w-full text-left px-5 py-3.5 transition-colors flex items-center gap-3"
+				style="border-bottom: 1px solid rgba(37,37,53,0.5);"
 			>
 				<span class="w-2.5 h-2.5 rounded-full shrink-0" style={ fmt.Sprintf("background: %s", ctx.Color) }></span>
 				<div class="flex-1 min-w-0">
 					<div class="flex items-center justify-between">
-						<span class="text-sm font-medium text-zinc-200 truncate">{ ctx.Name }</span>
+						<span class="text-sm font-medium truncate" style="color: var(--color-text-primary);">{ ctx.Name }</span>
 						if !ctx.LastEvent.IsZero() {
-							<span class="text-[10px] text-zinc-500 shrink-0 ml-2">{ ctx.LastEvent.Format("15:04") }</span>
+							<span class="text-[10px] shrink-0 ml-2" style="color: var(--color-text-tertiary);">{ ctx.LastEvent.Format("15:04") }</span>
 						}
 					</div>
 					if ctx.Summary != "" {
-						<p class="text-xs text-zinc-500 truncate mt-0.5">{ ctx.Summary }</p>
+						<p class="text-xs truncate mt-0.5" style="color: var(--color-text-tertiary);">{ ctx.Summary }</p>
 					}
 				</div>
 			</button>
@@ -427,10 +426,10 @@ templ ConnectLoading() {
 // Uses a stable id so Datastar can patch just this element during streaming.
 templ StreamingMessage(id string, content string) {
 	<div id={ "msg-" + id } class="flex justify-start">
-		<div class="max-w-[80%] bg-zinc-800 border border-zinc-700 text-zinc-200 rounded-2xl rounded-bl-md px-4 py-2.5">
+		<div class="max-w-[80%] px-4 py-3" style="background: var(--color-surface); border: 1px solid var(--color-border); color: var(--color-text-primary); border-radius: 18px 18px 18px 4px;">
 			<div class="flex items-center gap-2 mb-1">
-				<div class="w-2 h-2 rounded-full bg-blue-400 animate-pulse"></div>
-				<span class="text-[10px] text-zinc-500">Streaming...</span>
+				<div class="w-2 h-2 rounded-full animate-pulse" style="background: var(--color-accent-start);"></div>
+				<span class="text-[10px]" style="color: var(--color-text-tertiary);">Streaming...</span>
 			</div>
 			<p class="text-sm leading-relaxed whitespace-pre-wrap">{ content }</p>
 		</div>

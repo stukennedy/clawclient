@@ -1,94 +1,246 @@
+/* ClawClient — Midnight Prism Design System */
+/* Mobile-first AI chat interface with personality */
+
+/* Google Fonts — Syne (display) + Manrope (body) */
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@500;600;700;800&family=Manrope:wght@400;500;600;700&display=swap');
+
+/* Tailwind CSS 4 */
 @import "tailwindcss";
 
-/* ============================================
-   ClawClient Dark Theme
-   ============================================ */
+/* ============================================================
+   DESIGN TOKENS — Midnight Prism
+   ============================================================ */
 
-:root {
-  --color-bg-primary: #18181b;    /* zinc-900 */
-  --color-bg-secondary: #27272a;  /* zinc-800 */
-  --color-bg-tertiary: #3f3f46;   /* zinc-700 */
-  --color-text-primary: #f4f4f5;  /* zinc-100 */
-  --color-text-secondary: #a1a1aa; /* zinc-400 */
-  --color-text-muted: #71717a;    /* zinc-500 */
-  --color-border: #3f3f46;        /* zinc-700 */
-  --color-accent: #3b82f6;        /* blue-500 */
-}
+@layer theme {
+  :root {
+    /* Typography */
+    --font-display: 'Syne', system-ui, sans-serif;
+    --font-body: 'Manrope', system-ui, sans-serif;
 
-* {
-  box-sizing: border-box;
-}
+    /* Colors — Deep space background with vibrant accents */
+    --color-void: #0a0a12;           /* Deep blue-black background */
+    --color-surface: #151520;        /* Elevated surface */
+    --color-surface-hover: #1c1c2a;  /* Interactive hover */
+    --color-border: #252535;         /* Subtle borders */
+    --color-border-focus: #353545;   /* Focus state */
 
-html, body {
-  margin: 0;
-  padding: 0;
-  background: var(--color-bg-primary);
-  color: var(--color-text-primary);
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-}
+    /* Text */
+    --color-text-primary: #f8f8fc;   /* High contrast white */
+    --color-text-secondary: #b4b4c8; /* Muted purple-gray */
+    --color-text-tertiary: #7a7a8e;  /* Dimmer text */
 
-/* ============================================
-   Scrollbar Styling
-   ============================================ */
+    /* Accent — Energetic purple-pink gradient */
+    --color-accent-start: #a855f7;   /* Purple */
+    --color-accent-end: #ec4899;     /* Pink */
+    --color-accent-glow: rgba(168, 85, 247, 0.3);
 
-::-webkit-scrollbar {
-  width: 6px;
-}
+    /* Context Thread Colors — Vibrant & distinguishable */
+    --color-ctx-emerald: #10b981;
+    --color-ctx-sky: #0ea5e9;
+    --color-ctx-rose: #f43f5e;
+    --color-ctx-amber: #f59e0b;
+    --color-ctx-violet: #8b5cf6;
+    --color-ctx-cyan: #06b6d4;
+    --color-ctx-fuchsia: #d946ef;
+    --color-ctx-lime: #84cc16;
 
-::-webkit-scrollbar-track {
-  background: transparent;
-}
+    /* Semantic */
+    --color-success: #10b981;
+    --color-warning: #f59e0b;
+    --color-error: #ef4444;
+    --color-info: #3b82f6;
 
-::-webkit-scrollbar-thumb {
-  background: #3f3f46;
-  border-radius: 3px;
-}
+    /* Gradients */
+    --gradient-accent: linear-gradient(135deg, var(--color-accent-start) 0%, var(--color-accent-end) 100%);
+    --gradient-user-bubble: linear-gradient(135deg, #a855f7 0%, #d946ef 50%, #ec4899 100%);
+    --gradient-surface: linear-gradient(180deg, rgba(21, 21, 32, 0) 0%, rgba(21, 21, 32, 0.4) 100%);
 
-::-webkit-scrollbar-thumb:hover {
-  background: #52525b;
-}
+    /* Shadows */
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 4px 8px -2px rgba(0, 0, 0, 0.4), 0 2px 4px -2px rgba(168, 85, 247, 0.1);
+    --shadow-lg: 0 10px 24px -4px rgba(0, 0, 0, 0.5), 0 4px 8px -2px rgba(168, 85, 247, 0.15);
+    --shadow-glow: 0 0 24px rgba(168, 85, 247, 0.4), 0 0 8px rgba(236, 72, 153, 0.3);
 
-/* ============================================
-   Message Bubble Animations
-   ============================================ */
+    /* Spacing */
+    --touch-target: 44px;
+    --input-height: 52px;
 
-@keyframes message-in {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-#message-list > div {
-  animation: message-in 0.2s ease-out;
-}
-
-/* ============================================
-   Timeline Block Transitions
-   ============================================ */
-
-@keyframes block-in {
-  from {
-    opacity: 0;
-    transform: translateY(4px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
+    /* Timing */
+    --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-base: 250ms cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-slow: 400ms cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-bounce: 600ms cubic-bezier(0.34, 1.56, 0.64, 1);
   }
 }
 
-#timeline-content > div {
-  animation: block-in 0.15s ease-out;
+/* ============================================================
+   BASE STYLES
+   ============================================================ */
+
+@layer base {
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  html {
+    font-family: var(--font-body);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    background-color: var(--color-void);
+    color: var(--color-text-primary);
+    overflow: hidden;
+  }
+
+  h1, h2, h3, h4, h5, h6,
+  .font-display {
+    font-family: var(--font-display);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+
+  ::selection {
+    background-color: var(--color-accent-start);
+    color: white;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-accent-start);
+    outline-offset: 2px;
+  }
 }
 
-/* ============================================
-   Line Clamp Utility
-   ============================================ */
+/* ============================================================
+   SCROLLBAR
+   ============================================================ */
+
+@layer components {
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: var(--color-border);
+    border-radius: 4px;
+    transition: background var(--transition-fast);
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--color-border-focus);
+  }
+
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-border) transparent;
+  }
+}
+
+/* ============================================================
+   MESSAGE BUBBLE OVERFLOW PREVENTION
+   ============================================================ */
+
+#message-list > div > div > div {
+  overflow-wrap: break-word;
+  word-break: break-word;
+  min-width: 0;
+  overflow-x: hidden;
+}
+
+/* ============================================================
+   MESSAGE ANIMATIONS
+   ============================================================ */
+
+@layer components {
+  @keyframes message-enter {
+    0% {
+      opacity: 0;
+      transform: translateY(16px) scale(0.95);
+    }
+    50% {
+      transform: translateY(-2px) scale(1.01);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  #message-list > div {
+    animation: message-enter var(--transition-bounce) ease-out;
+  }
+
+  @keyframes block-in {
+    from {
+      opacity: 0;
+      transform: translateY(4px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  #timeline-content > div {
+    animation: block-in 0.15s ease-out;
+  }
+
+  /* Connection dot pulse */
+  @keyframes pulse-status {
+    0%, 100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 0.7;
+      transform: scale(0.9);
+    }
+  }
+
+  .shadow-\[0_0_6px_rgba\(52\,211\,153\,0\.6\)\] {
+    animation: pulse-status 2s ease-in-out infinite;
+  }
+
+  /* Thinking dots */
+  @keyframes thinking-pulse {
+    0%, 60%, 100% {
+      opacity: 0.3;
+      transform: scale(0.8);
+    }
+    30% {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  /* Loading spinner */
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  /* Skeleton loader */
+  @keyframes skeleton-pulse {
+    0% {
+      background-position: 200% 0;
+    }
+    100% {
+      background-position: -200% 0;
+    }
+  }
+}
+
+/* ============================================================
+   LINE CLAMP
+   ============================================================ */
 
 .line-clamp-2 {
   display: -webkit-box;
@@ -97,128 +249,146 @@ html, body {
   overflow: hidden;
 }
 
-/* ============================================
-   Connection Dot Pulse
-   ============================================ */
-
-@keyframes dot-pulse {
-  0%, 100% {
-    box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.4);
-  }
-  50% {
-    box-shadow: 0 0 0 4px rgba(52, 211, 153, 0);
-  }
-}
-
-.shadow-\[0_0_6px_rgba\(52\,211\,153\,0\.6\)\] {
-  animation: dot-pulse 2s ease-in-out infinite;
-}
-
-/* ============================================
-   Smooth Page Transitions
-   ============================================ */
+/* ============================================================
+   SMOOTH TRANSITIONS
+   ============================================================ */
 
 #main-content {
   transition: opacity 0.15s ease;
 }
 
-/* ============================================
-   Prose Overrides for Dark Theme
-   ============================================ */
+/* ============================================================
+   MARKDOWN CONTENT STYLING
+   ============================================================ */
 
-.prose-invert {
-  --tw-prose-body: #d4d4d8;
-  --tw-prose-headings: #f4f4f5;
-  --tw-prose-links: #60a5fa;
-  --tw-prose-code: #e4e4e7;
+.msg-markdown {
+  line-height: 1.6;
+  font-size: 15px;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 
-/* ============================================
-   Markdown Rendered Content
-   ============================================ */
+.msg-markdown > *:first-child {
+  margin-top: 0;
+}
+
+.msg-markdown > *:last-child {
+  margin-bottom: 0;
+}
 
 .msg-markdown h1, .msg-markdown h2, .msg-markdown h3 {
-  font-weight: 600;
-  color: #f4f4f5;
-  margin: 0.75em 0 0.25em;
+  font-family: var(--font-display);
+  font-weight: 700;
+  margin: 1.25em 0 0.5em;
+  line-height: 1.3;
+  color: var(--color-text-primary);
 }
-.msg-markdown h1 { font-size: 1.1em; }
-.msg-markdown h2 { font-size: 1.05em; }
-.msg-markdown h3 { font-size: 1em; }
+
+.msg-markdown h1 {
+  font-size: 1.3em;
+  background: var(--gradient-accent);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.msg-markdown h2 { font-size: 1.15em; }
+.msg-markdown h3 { font-size: 1.05em; }
 
 .msg-markdown p {
-  margin: 0.4em 0;
+  margin: 0.5em 0;
 }
 
 .msg-markdown ul, .msg-markdown ol {
-  margin: 0.4em 0;
+  margin: 0.5em 0;
   padding-left: 1.5em;
 }
 .msg-markdown ul { list-style: disc; }
 .msg-markdown ol { list-style: decimal; }
-.msg-markdown li { margin: 0.15em 0; }
+.msg-markdown li { margin: 0.2em 0; }
 
 .msg-markdown code {
-  background: rgba(63, 63, 70, 0.5);
-  color: #6ee7b7;
-  padding: 0.15em 0.35em;
+  background: rgba(168, 85, 247, 0.1);
+  border: 1px solid rgba(168, 85, 247, 0.2);
+  color: var(--color-accent-start);
+  padding: 2px 6px;
   border-radius: 4px;
   font-size: 0.9em;
 }
 
 .msg-markdown pre {
-  background: #09090b;
-  border: 1px solid #3f3f46;
+  background: var(--color-void);
+  border: 1px solid var(--color-border);
   border-radius: 8px;
-  padding: 0.75em 1em;
-  margin: 0.5em 0;
+  padding: 12px;
+  margin: 0.75em 0;
   overflow-x: auto;
   font-size: 0.85em;
 }
+
 .msg-markdown pre code {
   background: none;
-  color: #d4d4d8;
+  border: none;
+  color: var(--color-text-secondary);
   padding: 0;
   border-radius: 0;
 }
 
 .msg-markdown a {
-  color: #60a5fa;
+  color: var(--color-accent-start);
   text-decoration: underline;
+  text-underline-offset: 2px;
+  transition: color var(--transition-fast);
+}
+
+.msg-markdown a:hover {
+  color: var(--color-accent-end);
 }
 
 .msg-markdown blockquote {
-  border-left: 3px solid #3f3f46;
-  padding-left: 0.75em;
-  margin: 0.5em 0;
-  color: #a1a1aa;
+  border-left: 3px solid var(--color-accent-start);
+  padding-left: 1em;
+  margin: 0.75em 0;
+  color: var(--color-text-secondary);
+  font-style: italic;
 }
 
-.msg-markdown strong { font-weight: 600; color: #f4f4f5; }
+.msg-markdown strong {
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+
 .msg-markdown em { font-style: italic; }
 
 .msg-markdown hr {
   border: none;
-  border-top: 1px solid #3f3f46;
-  margin: 0.75em 0;
+  border-top: 1px solid var(--color-border);
+  margin: 1em 0;
 }
 
 .msg-markdown table {
   border-collapse: collapse;
-  margin: 0.5em 0;
+  margin: 0.75em 0;
   font-size: 0.85em;
   width: 100%;
   overflow-x: auto;
   display: block;
 }
+
 .msg-markdown th, .msg-markdown td {
-  border: 1px solid #3f3f46;
-  padding: 0.35em 0.6em;
+  border: 1px solid var(--color-border);
+  padding: 0.4em 0.75em;
   text-align: left;
 }
+
 .msg-markdown th {
-  background: rgba(63, 63, 70, 0.3);
+  background: var(--color-surface);
   font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.msg-markdown td {
+  color: var(--color-text-secondary);
 }
 
 .msg-markdown img {
@@ -227,15 +397,148 @@ html, body {
   margin: 0.5em 0;
 }
 
-/* Textarea input styling */
-.chat-input {
-  scrollbar-width: thin;
-  scrollbar-color: #3f3f46 transparent;
+/* ============================================================
+   MARKDOWN INSIDE USER BUBBLES (white text on gradient)
+   ============================================================ */
+
+.msg-markdown--user,
+.msg-markdown--user strong,
+.msg-markdown--user h1,
+.msg-markdown--user h2,
+.msg-markdown--user h3 {
+  color: white !important;
+  -webkit-text-fill-color: white !important;
+  background: none !important;
 }
+
+.msg-markdown--user a {
+  color: rgba(255, 255, 255, 0.9) !important;
+}
+
+.msg-markdown--user code {
+  background: rgba(255, 255, 255, 0.15) !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+  color: white !important;
+}
+
+.msg-markdown--user pre {
+  background: rgba(0, 0, 0, 0.2) !important;
+  border-color: rgba(255, 255, 255, 0.15) !important;
+}
+
+.msg-markdown--user pre code {
+  color: rgba(255, 255, 255, 0.9) !important;
+}
+
+.msg-markdown--user blockquote {
+  border-left-color: rgba(255, 255, 255, 0.4) !important;
+  color: rgba(255, 255, 255, 0.8) !important;
+}
+
+.msg-markdown--user th,
+.msg-markdown--user td {
+  border-color: rgba(255, 255, 255, 0.2) !important;
+  color: rgba(255, 255, 255, 0.9) !important;
+}
+
+.msg-markdown--user th {
+  background: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* ============================================================
+   TEXTAREA INPUT
+   ============================================================ */
+
+.chat-input {
+  font-family: var(--font-body);
+  font-size: 16px; /* Prevents iOS zoom */
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.chat-input:focus {
+  border-color: var(--color-accent-start) !important;
+  box-shadow: 0 0 0 3px var(--color-accent-glow);
+  outline: none;
+}
+
+.chat-input::placeholder {
+  color: var(--color-text-tertiary);
+}
+
 .chat-input::-webkit-scrollbar {
   width: 4px;
 }
+
 .chat-input::-webkit-scrollbar-thumb {
-  background: #3f3f46;
+  background: var(--color-border);
   border-radius: 2px;
+}
+
+/* ============================================================
+   INLINE MEDIA
+   ============================================================ */
+
+#message-list img {
+  border-radius: 12px;
+  max-width: 100%;
+  max-height: 300px;
+  object-fit: contain;
+  cursor: pointer;
+  transition: transform var(--transition-fast);
+}
+
+#message-list img:active {
+  transform: scale(0.98);
+}
+
+/* ============================================================
+   UTILITY CLASSES
+   ============================================================ */
+
+@layer utilities {
+  .gradient-text {
+    background: var(--gradient-accent);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .glass-surface {
+    background: rgba(21, 21, 32, 0.7);
+    backdrop-filter: blur(12px);
+    border: 1px solid var(--color-border);
+  }
+}
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+
+@media (min-width: 768px) {
+  .chat-input {
+    font-size: 15px;
+  }
+}
+
+/* ============================================================
+   ACCESSIBILITY
+   ============================================================ */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@media (prefers-contrast: high) {
+  :root {
+    --color-border: #404050;
+    --color-text-secondary: #d0d0e0;
+  }
 }
