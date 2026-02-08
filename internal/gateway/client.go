@@ -146,19 +146,35 @@ func (c *Client) Connect(gatewayURL, token string) error {
 	c.conn = conn
 	c.mu.Unlock()
 
+	// Pre-register challenge listener BEFORE starting readLoop to avoid race
+	challengeCh := make(chan *Message, 1)
+	c.pendingMu.Lock()
+	c.pending["event:connect.challenge"] = challengeCh
+	c.pendingMu.Unlock()
+
 	// Start reading messages
 	go c.readLoop()
 
-	// Wait for connect.challenge event
+	// Try to wait for connect.challenge, but it's optional on loopback
 	c.setState(StateChallenge)
 
-	challengeMsg, err := c.waitForMessage("connect.challenge", 10*time.Second)
-	if err != nil {
-		c.Close()
-		return fmt.Errorf("waiting for challenge: %w", err)
+	var challengeMsg *Message
+	select {
+	case challengeMsg = <-challengeCh:
+	case <-time.After(5 * time.Second):
 	}
 
-	log.Printf("[gateway] Received challenge: %+v", challengeMsg)
+	// Clean up
+	c.pendingMu.Lock()
+	delete(c.pending, "event:connect.challenge")
+	c.pendingMu.Unlock()
+
+	_ = challengeMsg // may be nil on loopback
+	if challengeMsg != nil {
+		log.Printf("[gateway] Received challenge")
+	} else {
+		log.Printf("[gateway] No challenge (loopback/auto-approve), proceeding")
+	}
 
 	// Send connect request
 	reqID := c.nextReqID()
@@ -170,10 +186,10 @@ func (c *Client) Connect(gatewayURL, token string) error {
 			"minProtocol": 3,
 			"maxProtocol": 3,
 			"client": map[string]interface{}{
-				"id":       "clawclient",
+				"id":       "webchat",
 				"version":  "0.1.0",
 				"platform": "linux",
-				"mode":     "operator",
+				"mode":     "ui",
 			},
 			"role":        "operator",
 			"scopes":      []string{"operator.read", "operator.write"},
@@ -198,20 +214,6 @@ func (c *Client) Connect(gatewayURL, token string) error {
 		return fmt.Errorf("waiting for connect response: %w", err)
 	}
 
-	// Check for hello-ok
-	if result, ok := resMsg.Result.(map[string]interface{}); ok {
-		if status, _ := result["status"].(string); status == "hello-ok" {
-			if sk, _ := result["sessionKey"].(string); sk != "" {
-				c.mu.Lock()
-				c.sessionKey = sk
-				c.mu.Unlock()
-			}
-			c.setState(StateConnected)
-			log.Printf("[gateway] Connected! Session: %s", c.SessionKey())
-			return nil
-		}
-	}
-
 	// Check for error
 	if resMsg.Error != nil {
 		c.Close()
@@ -219,8 +221,29 @@ func (c *Client) Connect(gatewayURL, token string) error {
 		return fmt.Errorf("connect rejected: %s", string(errMsg))
 	}
 
+	// Check ok field or payload for hello-ok
+	if resMsg.OK != nil && *resMsg.OK {
+		// Try payload (gateway response format)
+		if payload, ok := resMsg.Payload.(map[string]interface{}); ok {
+			if t, _ := payload["type"].(string); t == "hello-ok" {
+				log.Printf("[gateway] Connected (hello-ok)")
+			}
+		}
+		// Also try result field
+		if result, ok := resMsg.Result.(map[string]interface{}); ok {
+			if sk, _ := result["sessionKey"].(string); sk != "" {
+				c.mu.Lock()
+				c.sessionKey = sk
+				c.mu.Unlock()
+			}
+		}
+		c.setState(StateConnected)
+		log.Printf("[gateway] Connected!")
+		return nil
+	}
+
 	c.setState(StateConnected)
-	log.Printf("[gateway] Connected (result: %+v)", resMsg.Result)
+	log.Printf("[gateway] Connected (result: %+v, payload: %+v)", resMsg.Result, resMsg.Payload)
 	return nil
 }
 
@@ -397,7 +420,7 @@ func (c *Client) handleMessage(msg *Message) {
 	case "event":
 		// Check pending event waiters
 		c.pendingMu.Lock()
-		key := "event:" + msg.Method
+		key := "event:" + msg.EventName()
 		if ch, ok := c.pending[key]; ok {
 			select {
 			case ch <- msg:
@@ -408,7 +431,7 @@ func (c *Client) handleMessage(msg *Message) {
 		c.pendingMu.Unlock()
 
 		// Handle agent events specially
-		if msg.Method == "agent" {
+		if msg.EventName() == "agent" {
 			c.mu.RLock()
 			cb := c.onAgent
 			c.mu.RUnlock()
@@ -429,7 +452,7 @@ func (c *Client) handleMessage(msg *Message) {
 		c.mu.RUnlock()
 		if cb != nil {
 			cb(Event{
-				Type: msg.Method,
+				Type: msg.EventName(),
 				Data: msg.Params,
 				Raw:  msg,
 			})

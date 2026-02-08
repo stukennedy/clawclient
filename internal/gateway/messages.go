@@ -7,12 +7,23 @@ import (
 
 // Message represents a WebSocket protocol message.
 type Message struct {
-	Type   string      `json:"type"`             // "req", "res", "event"
+	Type   string      `json:"type"`              // "req", "res", "event"
 	ID     string      `json:"id,omitempty"`      // Request/response ID
-	Method string      `json:"method,omitempty"`  // Method name (for req/event)
-	Params interface{} `json:"params,omitempty"`  // Request params or event data
+	Method string      `json:"method,omitempty"`  // Method name (for req)
+	Event  string      `json:"event,omitempty"`   // Event name (for events)
+	Params interface{} `json:"params,omitempty"`  // Request params
+	Payload interface{} `json:"payload,omitempty"` // Event payload
 	Result interface{} `json:"result,omitempty"`  // Response result
 	Error  interface{} `json:"error,omitempty"`   // Response error
+	OK     *bool       `json:"ok,omitempty"`      // Response success
+}
+
+// EventName returns the event name (from Event field) or Method as fallback
+func (m *Message) EventName() string {
+	if m.Event != "" {
+		return m.Event
+	}
+	return m.Method
 }
 
 // Event represents an incoming gateway event.
